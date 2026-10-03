@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One responsive widget instead of the iOS widget pair: the picker offers a
+     2x2 tile, resizing decides between verdict (small), row list (wide) and
+     headed list (tall) — SizeMode.Responsive in HissiWidget. The 30-minute
+     updatePeriodMillis is RefreshInterval.MINUTES; in-between reloads come
+     from the app (AppContainer.reloadWidgets). -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_description"
+    android:initialLayout="@layout/glance_default_loading_layout" />

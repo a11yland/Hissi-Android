@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The screen ground of the Creme-Lila palette (Palette.BACKGROUND_*),
+         for the window before Compose draws; values-night carries the dark one. -->
+    <color name="hissi_background">#FBF3E4</color>
+</resources>

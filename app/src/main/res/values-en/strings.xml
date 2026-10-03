@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- English translations, reused from Shared/Localizable.xcstrings where the
+     same string exists on iOS. -->
+<resources>
+    <string name="title_favorites">Favorites</string>
+    <string name="title_recents">Recent Searches</string>
+    <string name="title_search">Search</string>
+    <string name="search_prompt">Find a station</string>
+    <string name="clear_search">Clear search</string>
+
+    <string name="no_favorites_title">No Favorites</string>
+    <string name="no_favorites_hint">Tap the search field below to find and add elevators.</string>
+    <string name="no_recents_hint">Your recent searches will appear here.</string>
+    <string name="recent_remove">Remove “%1$s”</string>
+
+    <string name="status_working">In service</string>
+    <string name="status_broken">Out of service</string>
+    <string name="status_unknown">Status unknown</string>
+    <string name="status_stale">Status possibly outdated</string>
+
+    <string name="fav_add">Add to Favorites</string>
+    <string name="fav_remove">Remove from Favorites</string>
+    <string name="action_refresh">Refresh</string>
+
+    <string name="updating_status">Updating status …</string>
+    <string name="search_failed">Search failed.</string>
+    <string name="refresh_failed">One or more elevators could not be refreshed.</string>
+    <string name="error_title">Error</string>
+    <string name="no_results">No results for “%1$s”</string>
+
+    <string name="sort">Sort</string>
+    <string name="order_recently_added">Recently added</string>
+    <string name="order_manual">Custom order</string>
+    <string name="move_up">Move up</string>
+    <string name="move_down">Move down</string>
+    <string name="moved_announcement">%1$s now at position %2$d of %3$d</string>
+    <string name="checked_at">Checked %1$s</string>
+    <string name="as_of">As of %1$s</string>
+    <string name="as_of_unknown">Data age unknown</string>
+    <string name="data_by">Data by</string>
+    <string name="data_project_of">, a project of</string>
+    <string name="about_open">About Hissi</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_data_title">Data</string>
+    <string name="about_data_detail">Elevator data comes from accessibility.cloud, a project by the non-profit Sozialhelden e.V.</string>
+    <string name="about_tagline">Elevator status for Berlin and Brandenburg</string>
+    <string name="about_features_title">Features</string>
+    <string name="about_privacy_title">Privacy</string>
+    <string name="about_privacy_detail">Hissi needs no account and collects no data. Favorites stay on your device; your location never leaves the device.</string>
+    <string name="about_version_label">Version</string>
+    <string name="shortcut_nearby_short">Nearby</string>
+    <string name="shortcut_nearby_long">Show nearby stations</string>
+    <string name="shortcut_favorites_short">Favorites</string>
+    <string name="shortcut_favorites_long">Open favorites</string>
+    <string name="action_close">Close</string>
+    <string name="feature_alerts_title">Disruption alerts</string>
+    <string name="feature_alerts_detail">Speaks up when a favorite breaks down or works again.</string>
+    <string name="feature_widget_title">Widgets</string>
+    <string name="feature_widget_detail">Your favorites and the stations nearby on the home screen.</string>
+
+    <string name="relative_just_now">just now</string>
+    <string name="relative_minutes">%1$d min ago</string>
+    <string name="relative_hours">%1$d h ago</string>
+    <string name="relative_one_day">1 day ago</string>
+    <string name="relative_days">%1$d days ago</string>
+    <string name="relative_on_date">on %1$s</string>
+
+    <string name="network_regional">Regional rail</string>
+    <string name="network_access">Access</string>
+    <string name="network_regional_spoken">Regional rail</string>
+    <string name="appearance_light">Switch to light appearance</string>
+    <string name="appearance_dark">Switch to dark appearance</string>
+
+    <string name="action_back">Back</string>
+    <string name="field_elevator">Elevator</string>
+    <string name="field_data_age">Data as of</string>
+    <string name="field_reason">Disruption reason</string>
+    <string name="field_source">Source</string>
+    <string name="field_operator">Operator</string>
+    <string name="value_unknown">unknown</string>
+    <string name="open_in_maps">Open in Maps</string>
+    <string name="map_snippet_label">Map of %1$s</string>
+    <string name="street_view_label">Street-level view of %1$s</string>
+    <string name="open_street_view">Open Street View</string>
+
+    <string name="nearby_title">Nearby</string>
+    <string name="nearby_show">Show nearby stations</string>
+    <string name="nearby_radius">up to %1$s on foot</string>
+    <string name="nearby_none_within">No station with an elevator within %1$s.</string>
+    <string name="nearby_broken_ratio">%1$d of %2$d out of service</string>
+    <string name="nearby_unknown_ratio">%1$d of %2$d unknown</string>
+    <string name="all_working">All in service</string>
+    <string name="map_show_location">Show my location</string>
+    <string name="nearby_locating">Locating …</string>
+    <string name="nearby_denied">Location access is off – allow it in Settings.</string>
+    <string name="nearby_open_settings">Open Settings</string>
+
+    <string name="alerts_title">Disruption alerts</string>
+    <string name="alerts_hint">Notifies you when a favorite goes out of service or is back – checked about every 30 minutes.</string>
+    <string name="alerts_denied">Notifications are off – allow them in Settings.</string>
+    <string name="alerts_battery_hint">For alerts to arrive reliably, exempt Hissi from battery optimization.</string>
+    <string name="alerts_battery_open">Open battery settings</string>
+    <string name="alert_broke_title">Elevator out of service</string>
+    <string name="alert_repaired_title">Elevator back in service</string>
+    <string name="alert_and_more">%1$s and %2$d more</string>
+
+    <string name="widget_name">Elevator status</string>
+    <string name="widget_description">Status of your monitored elevators.</string>
+    <string name="widget_all">All</string>
+    <string name="widget_in_service">in service</string>
+    <string name="widget_out_of_service">out of service</string>
+    <string name="widget_unknown">unknown</string>
+    <string name="nearby_widget_name">Nearby</string>
+    <string name="nearby_widget_description">Stations with elevators within walking distance and their status.</string>
+    <string name="widget_location_allow">Allow location in the app</string>
+    <string name="widget_location_unavailable">Location unavailable</string>
+    <string name="widget_more">+ %1$d more</string>
+    <string name="summary_broken">%1$d out of service</string>
+    <string name="summary_unknown">%1$d unknown</string>
+    <string name="status_short_working">OK</string>
+    <string name="status_short_broken">Broken</string>
+    <string name="status_short_unknown">?</string>
+
+    <string name="welcome_title">Welcome to Hissi</string>
+    <string name="welcome_search_title">Find stations</string>
+    <string name="welcome_search_detail">All elevators of a station, with live status.</string>
+    <string name="welcome_favorites_title">Favorites</string>
+    <string name="welcome_favorites_detail">Your elevators, all at a glance.</string>
+    <string name="welcome_nearby_title">Nearby</string>
+    <string name="welcome_nearby_detail">Stations with elevators nearby, including elevator status.</string>
+    <string name="whats_new_title">What\'s New</string>
+    <string name="onboarding_get_started">Get started</string>
+    <string name="onboarding_continue">Continue</string>
+</resources>

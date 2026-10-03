@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- German is the source language, mirroring the iOS convention (the German
+     literals in Shared/Localizable.xcstrings are the canonical vocabulary). -->
+<resources>
+    <string name="app_name" translatable="false">Hissi</string>
+
+    <string name="title_favorites">Favoriten</string>
+    <string name="title_recents">Letzte Suchen</string>
+    <string name="title_search">Suche</string>
+    <string name="search_prompt">Station finden</string>
+    <string name="clear_search">Suche löschen</string>
+
+    <string name="no_favorites_title">Keine Favoriten</string>
+    <string name="no_favorites_hint">Tippe unten ins Suchfeld, um Aufzüge zu finden und hinzuzufügen.</string>
+    <string name="no_recents_hint">Deine letzten Suchen erscheinen hier.</string>
+    <string name="recent_remove">„%1$s“ entfernen</string>
+
+    <string name="status_working">In Betrieb</string>
+    <string name="status_broken">Außer Betrieb</string>
+    <string name="status_unknown">Status unbekannt</string>
+    <string name="status_stale">Status möglicherweise veraltet</string>
+
+    <string name="fav_add">Zu Favoriten hinzufügen</string>
+    <string name="fav_remove">Aus Favoriten entfernen</string>
+    <string name="action_refresh">Aktualisieren</string>
+
+    <string name="updating_status">Status wird aktualisiert …</string>
+    <string name="search_failed">Suche fehlgeschlagen.</string>
+    <string name="refresh_failed">Ein oder mehrere Aufzüge konnten nicht abgerufen werden.</string>
+    <string name="error_title">Fehler</string>
+    <string name="no_results">Keine Ergebnisse für „%1$s“</string>
+
+    <string name="sort">Sortieren</string>
+    <string name="order_recently_added">Zuletzt hinzugefügt</string>
+    <string name="order_manual">Eigene Reihenfolge</string>
+    <string name="move_up">Nach oben bewegen</string>
+    <string name="move_down">Nach unten bewegen</string>
+    <string name="moved_announcement">%1$s an Position %2$d von %3$d</string>
+    <string name="checked_at">Geprüft %1$s</string>
+    <string name="as_of">Stand %1$s</string>
+    <string name="as_of_unknown">Stand unbekannt</string>
+    <string name="data_by">Daten von</string>
+    <string name="data_project_of">, einem Projekt der</string>
+    <string name="about_open">Über Hissi</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_data_title">Daten</string>
+    <string name="about_data_detail">Die Aufzugsdaten stammen von accessibility.cloud, einem Projekt des gemeinnützigen Sozialhelden e.V.</string>
+    <string name="about_tagline">Aufzugstatus für Berlin und Brandenburg</string>
+    <string name="about_features_title">Funktionen</string>
+    <string name="about_privacy_title">Datenschutz</string>
+    <string name="about_privacy_detail">Hissi braucht kein Konto und sammelt keine Daten. Favoriten liegen auf deinem Gerät, dein Standort verlässt das Gerät nicht.</string>
+    <string name="about_version_label">Version</string>
+    <string name="shortcut_nearby_short">In der Nähe</string>
+    <string name="shortcut_nearby_long">Stationen in der Nähe anzeigen</string>
+    <string name="shortcut_favorites_short">Favoriten</string>
+    <string name="shortcut_favorites_long">Favoriten öffnen</string>
+    <string name="action_close">Schließen</string>
+    <string name="feature_alerts_title">Störungsalarme</string>
+    <string name="feature_alerts_detail">Meldet sich, wenn ein Favorit ausfällt oder wieder läuft.</string>
+    <string name="feature_widget_title">Widgets</string>
+    <string name="feature_widget_detail">Deine Favoriten und die Stationen in der Nähe auf dem Startbildschirm.</string>
+
+    <string name="relative_just_now">gerade eben</string>
+    <string name="relative_minutes">vor %1$d Min.</string>
+    <string name="relative_hours">vor %1$d Std.</string>
+    <string name="relative_one_day">vor 1 Tag</string>
+    <string name="relative_days">vor %1$d Tagen</string>
+    <string name="relative_on_date">am %1$s</string>
+
+    <string name="network_regional">Regionalverkehr</string>
+    <string name="network_access">Zugang</string>
+    <string name="network_regional_spoken">Regionalbahn</string>
+    <string name="appearance_light">Zu hellem Erscheinungsbild wechseln</string>
+    <string name="appearance_dark">Zu dunklem Erscheinungsbild wechseln</string>
+
+    <string name="action_back">Zurück</string>
+    <string name="field_elevator">Aufzug</string>
+    <string name="field_data_age">Datenstand</string>
+    <string name="field_reason">Störungsgrund</string>
+    <string name="field_source">Quelle</string>
+    <string name="field_operator">Betreiber</string>
+    <string name="value_unknown">unbekannt</string>
+    <string name="open_in_maps">In Karten öffnen</string>
+    <string name="map_snippet_label">Kartenausschnitt %1$s</string>
+    <string name="street_view_label">Straßenansicht %1$s</string>
+    <string name="open_street_view">Street View öffnen</string>
+
+    <string name="nearby_title">In der Nähe</string>
+    <string name="nearby_show">Stationen in der Nähe anzeigen</string>
+    <string name="nearby_radius">bis %1$s zu Fuß</string>
+    <string name="nearby_none_within">Keine Station mit Aufzug im Umkreis von %1$s.</string>
+    <string name="nearby_broken_ratio">%1$d von %2$d außer Betrieb</string>
+    <string name="nearby_unknown_ratio">%1$d von %2$d unbekannt</string>
+    <string name="all_working">Alle in Betrieb</string>
+    <string name="map_show_location">Meinen Standort anzeigen</string>
+    <string name="nearby_locating">Standort wird ermittelt …</string>
+    <string name="nearby_denied">Standortzugriff ist deaktiviert – erlaube ihn in den Einstellungen.</string>
+    <string name="nearby_open_settings">Einstellungen öffnen</string>
+
+    <string name="alerts_title">Störungsalarme</string>
+    <string name="alerts_hint">Meldet, wenn ein Favorit ausfällt oder wieder läuft – geprüft etwa alle 30 Minuten.</string>
+    <string name="alerts_denied">Benachrichtigungen sind deaktiviert – erlaube sie in den Einstellungen.</string>
+    <string name="alerts_battery_hint">Damit Alarme zuverlässig ankommen, nimm Hissi von der Akku-Optimierung aus.</string>
+    <string name="alerts_battery_open">Akku-Optimierung öffnen</string>
+    <string name="alert_broke_title">Aufzug außer Betrieb</string>
+    <string name="alert_repaired_title">Aufzug wieder in Betrieb</string>
+    <string name="alert_and_more">%1$s und %2$d weitere</string>
+
+    <string name="widget_name">Aufzug-Status</string>
+    <string name="widget_description">Status der überwachten Aufzüge.</string>
+    <string name="widget_all">Alle</string>
+    <string name="widget_in_service">in Betrieb</string>
+    <string name="widget_out_of_service">außer Betrieb</string>
+    <string name="widget_unknown">unbekannt</string>
+    <string name="nearby_widget_name">In der Nähe</string>
+    <string name="nearby_widget_description">Stationen mit Aufzug in Fußweite und ihr Status.</string>
+    <string name="widget_location_allow">Standort in der App erlauben</string>
+    <string name="widget_location_unavailable">Standort nicht verfügbar</string>
+    <string name="widget_more">+ %1$d weitere</string>
+    <string name="summary_broken">%1$d außer Betrieb</string>
+    <string name="summary_unknown">%1$d unbekannt</string>
+    <string name="status_short_working">OK</string>
+    <string name="status_short_broken">Defekt</string>
+    <string name="status_short_unknown">?</string>
+
+    <string name="welcome_title">Willkommen bei Hissi</string>
+    <string name="welcome_search_title">Stationen finden</string>
+    <string name="welcome_search_detail">Alle Aufzüge einer Station mit Live-Status.</string>
+    <string name="welcome_favorites_title">Favoriten</string>
+    <string name="welcome_favorites_detail">Deine Aufzüge, alle auf einen Blick.</string>
+    <string name="welcome_nearby_title">In der Nähe</string>
+    <string name="welcome_nearby_detail">Stationen mit Aufzügen in der Nähe, inkl. Aufzug-Status.</string>
+    <string name="whats_new_title">Was ist neu</string>
+    <string name="onboarding_get_started">Los geht\'s</string>
+    <string name="onboarding_continue">Weiter</string>
+</resources>

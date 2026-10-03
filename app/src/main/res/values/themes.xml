@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose owns all theming; this only styles the window before setContent
+         (the palette's ground, so the launch doesn't flash white). -->
+    <style name="Theme.Hissi" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/hissi_background</item>
+    </style>
+</resources>

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- One-shot fix for the nearby-station suggestions; requested in context
+         from the user's button tap, used in memory only (on-device sort). -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- Disruption alerts; requested in context from the alerts toggle. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:name=".HissiApplication"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:localeConfig="@xml/locales_config"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Hissi">
+
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${mapsApiKey}" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Launcher shortcuts (long-press the icon): the Android
+                 counterpart of the iOS App Shortcuts' presets. -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity>
+
+        <!-- Not exported: APPWIDGET_UPDATE arrives from the system, which
+             reaches non-exported receivers. The label is the picker line
+             under the app name, so it says what the widget shows. -->
+        <receiver
+            android:name=".widget.HissiWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/hissi_widget_info" />
+        </receiver>
+
+        <!-- "In der Nähe": the stations within walking distance and their
+             lift status — the app's nearby block as a tile (iOS NearbyWidget).
+             Uses the location permission the app holds; it never asks itself. -->
+        <receiver
+            android:name=".widget.NearbyWidgetReceiver"
+            android:exported="false"
+            android:label="@string/nearby_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/nearby_widget_info" />
+        </receiver>
+    </application>
+
+</manifest>

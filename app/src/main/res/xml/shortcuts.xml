@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Static launcher shortcuts — the presets a user gets without assembling
+     anything, like the iOS App Shortcuts. "In der Nähe" opens the app on the
+     nearby block (MainActivity.EXTRA_SHOW_NEARBY), "Favoriten" the favorites. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="nearby"
+        android:enabled="true"
+        android:icon="@drawable/ic_widget_location"
+        android:shortcutShortLabel="@string/shortcut_nearby_short"
+        android:shortcutLongLabel="@string/shortcut_nearby_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.a11yland.Hissi"
+            android:targetClass="com.a11yland.hissi.MainActivity">
+            <extra
+                android:name="com.a11yland.hissi.SHOW_NEARBY"
+                android:value="true" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="favorites"
+        android:enabled="true"
+        android:icon="@drawable/ic_widget_star"
+        android:shortcutShortLabel="@string/shortcut_favorites_short"
+        android:shortcutLongLabel="@string/shortcut_favorites_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.a11yland.Hissi"
+            android:targetClass="com.a11yland.hissi.MainActivity" />
+    </shortcut>
+</shortcuts>
