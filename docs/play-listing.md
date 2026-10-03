@@ -46,4 +46,4 @@ Note on "Kein Tracking": the app requests Google Maps/Street View snippets, a Go
 
 - App icon 512×512: `play/icon-512.png` — from the design package (the launcher composition, full-bleed; Play masks the corners itself).
 - Feature graphic 1024×500: `play/feature-graphic.png` — from the design package (lockup + tagline on the cream ground).
-- Phone screenshots: `play/screenshots/` — 4 shots at 1080×1920 (favorites dark, search results, favorites light, welcome sheet), taken on the Pixel_4 emulator (per-app locale de-DE) and pillarboxed from 1080×2280 to the 9:16 ratio Play requires (`magick -resize x1920 -extent 1080x1920`, background matched to the app theme).
+- Phone screenshots: `play/screenshots/` — 4 shots at 1080×1920 (favorites dark, search results, favorites light, welcome sheet), taken on the Pixel_4 emulator (per-app locale de-DE, Creme-Lila palette, 2026-10-03) and pillarboxed from 1080×2280 to the 9:16 ratio Play requires, background matched to the app ground (`#FBF3E4` light, `#120E17` dark).
