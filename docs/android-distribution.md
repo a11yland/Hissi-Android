@@ -31,7 +31,7 @@ already runs TestFlight.
 
 - [ ] Store listing: short/full description, 512 px icon, feature graphic,
       ≥ 2 phone screenshots.
-- [ ] Privacy policy URL — required, the app declares location permissions: `https://github.com/a11yland/Hissi-iOS/blob/main/PRIVACY.md` (shared with iOS; it carries an Android paragraph for the Maps SDK).
+- [ ] Privacy policy URL — required, the app declares location permissions: `https://github.com/a11yland/Hissi-Android/blob/main/PRIVACY.md` (the Android policy: Maps SDK, local-only favorites, alerts).
 - [ ] Data safety form: *our* code collects and shares nothing — location is
       used on-device only and never transmitted, no accounts, no tracking.
       (On-device-only processing does not count as "collected".) The **Maps
