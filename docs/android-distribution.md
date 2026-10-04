@@ -12,16 +12,18 @@ already runs TestFlight.
       at creation; they shift.
 - [ ] Create the app: name "Hissi", default language German, app (not game),
       free.
-- [ ] Accept Play App Signing (the default). Afterwards note **both** SHA-1s
-      under Console → App integrity: the *upload key* signs what you build,
-      the *app signing key* signs what testers actually install.
+- [x] Accept Play App Signing (the default). Afterwards note **both** SHA-1s
+      under Console → Protected with Play → Play Store protection → Play App
+      Signing (formerly "App integrity"): the *upload key* signs what you
+      build, the *app signing key* signs what testers actually install.
 
 ## One-time: release build plumbing
 
-- [ ] Generate an upload keystore (`keytool -genkeypair`), keep it out of the
-      repo, and wire a `release` signing config off `local.properties` in
-      `app/build.gradle.kts` — only the debug config exists today.
-- [ ] Restrict the Maps API key to the package plus **both** SHA-1s. With only
+- [x] Upload keystore: `~/Keys/hissi-upload.jks` (alias `hissi-upload`, created
+      2026-10-04 via Android Studio), outside the repo; the `release` signing
+      config reads `hissi.upload.*` from `local.properties`.
+- [x] Restrict the Maps API key to the package plus **both** SHA-1s (done
+      2026-10-04 in the Cloud Console next to the LiftBoy entries). With only
       the upload-key SHA-1 the map snippet goes blank for testers, because
       Play re-signs the AAB with the app signing key.
 - [ ] Real transit token in `local.properties` on the release-building machine
