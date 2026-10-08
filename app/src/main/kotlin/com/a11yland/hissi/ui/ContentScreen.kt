@@ -58,6 +58,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -116,6 +118,16 @@ fun ContentScreen(
         if (nearbyRequests > 0) showNearby()
     }
     val searchFocused by searchInteraction.collectIsFocusedAsState()
+    // Leaving the search: drop the focus and the keyboard, which takes the
+    // screen back to the favorites (the mode derives from focus and query).
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val leaveSearch: () -> Unit = {
+        query = ""
+        focusManager.clearFocus()
+        keyboard?.hide()
+    }
+    BackHandler(enabled = searchFocused || query.isNotEmpty()) { leaveSearch() }
     val favorites by monitor.favorites.collectAsState()
     val isRefreshing by monitor.isLoading.collectAsState()
     val pendingOnboarding by monitor.pendingOnboarding.collectAsState()
@@ -287,6 +299,15 @@ fun ContentScreen(
                                 Icon(
                                     Icons.Filled.Close,
                                     contentDescription = stringResource(R.string.clear_search),
+                                )
+                            }
+                        } else if (searchFocused) {
+                            // Empty but focused (recents mode): the way back
+                            // to the favorites.
+                            IconButton(onClick = leaveSearch) {
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription = stringResource(R.string.close_search),
                                 )
                             }
                         }
