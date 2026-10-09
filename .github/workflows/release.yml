@@ -1,0 +1,129 @@
+name: Release
+
+# Manual only. Bumps the version in app/build.gradle.kts, builds the signed
+# release bundle, commits the bump, tags it and publishes a GitHub release
+# with the AAB and the R8 mapping. Uploading to Play stays manual (see
+# docs/android-distribution.md).
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "versionName for the release (e.g. 1.1). versionCode is incremented automatically."
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate input and ref
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Releases are cut from main only (got $GITHUB_REF)."
+            exit 1
+          fi
+          if ! [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]]; then
+            echo "::error::version must look like 1.1 or 1.1.0 (got '$VERSION')."
+            exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
+            echo "::error::Tag v$VERSION already exists."
+            exit 1
+          fi
+
+      - name: Bump versionCode and versionName
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          file=app/build.gradle.kts
+          current=$(sed -nE 's/^ *versionCode = ([0-9]+)$/\1/p' "$file")
+          next=$((current + 1))
+          sed -i -E "s/^( *versionCode = )[0-9]+$/\1$next/" "$file"
+          sed -i -E "s/^( *versionName = )\"[^\"]*\"$/\1\"$VERSION\"/" "$file"
+          grep -E 'version(Code|Name) =' "$file"
+          echo "VERSION_CODE=$next" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Write local.properties and keystore from secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.HISSI_UPLOAD_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.HISSI_UPLOAD_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.HISSI_UPLOAD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.HISSI_UPLOAD_KEY_PASSWORD }}
+          TRANSIT_TOKEN: ${{ secrets.HISSI_TRANSIT_TOKEN }}
+          MAPS_API_KEY: ${{ secrets.HISSI_MAPS_API_KEY }}
+        run: |
+          missing=0
+          for pair in KEYSTORE_BASE64:HISSI_UPLOAD_KEYSTORE_BASE64 STORE_PASSWORD:HISSI_UPLOAD_STORE_PASSWORD \
+                      KEY_ALIAS:HISSI_UPLOAD_KEY_ALIAS KEY_PASSWORD:HISSI_UPLOAD_KEY_PASSWORD \
+                      TRANSIT_TOKEN:HISSI_TRANSIT_TOKEN MAPS_API_KEY:HISSI_MAPS_API_KEY; do
+            var=${pair%%:*}; secret=${pair#*:}
+            if [ -z "${!var}" ]; then
+              echo "::error::Secret $secret is not set."
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ]
+          keystore="$RUNNER_TEMP/upload.jks"
+          echo "$KEYSTORE_BASE64" | base64 -d > "$keystore"
+          cat > local.properties <<EOF
+          hissi.transitToken=$TRANSIT_TOKEN
+          hissi.mapsApiKey=$MAPS_API_KEY
+          hissi.upload.storeFile=$keystore
+          hissi.upload.storePassword=$STORE_PASSWORD
+          hissi.upload.keyAlias=$KEY_ALIAS
+          hissi.upload.keyPassword=$KEY_PASSWORD
+          EOF
+
+      - name: Unit tests and signed release bundle
+        run: ./gradlew test :app:bundleRelease
+
+      - name: Collect artifacts
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/bundle/release/app-release.aab "dist/hissi-$VERSION.aab"
+          cp app/build/outputs/mapping/release/mapping.txt "dist/hissi-$VERSION-mapping.txt"
+          ls -l dist
+
+      - name: Commit bump, tag and push
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/build.gradle.kts
+          git commit -m "chore(release): v$VERSION (versionCode $VERSION_CODE)"
+          git tag -a "v$VERSION" -m "Hissi $VERSION"
+          git push origin main "v$VERSION"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh release create "v$VERSION" \
+            --title "Hissi $VERSION" \
+            --generate-notes \
+            "dist/hissi-$VERSION.aab#Release bundle (AAB, versionCode $VERSION_CODE)" \
+            "dist/hissi-$VERSION-mapping.txt#R8 mapping"

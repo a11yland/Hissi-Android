@@ -28,6 +28,17 @@ already runs TestFlight.
       Play re-signs the AAB with the app signing key.
 - [ ] Real transit token in `local.properties` on the release-building machine
       — CI's empty token would ship an app that cannot fetch anything.
+- [ ] GitHub secrets for the release workflow (same values as
+      `local.properties`, keystore base64-encoded):
+
+      ```sh
+      gh secret set HISSI_UPLOAD_KEYSTORE_BASE64 < <(base64 -i ~/Keys/hissi-upload.jks)
+      gh secret set HISSI_UPLOAD_STORE_PASSWORD
+      gh secret set HISSI_UPLOAD_KEY_ALIAS
+      gh secret set HISSI_UPLOAD_KEY_PASSWORD
+      gh secret set HISSI_TRANSIT_TOKEN
+      gh secret set HISSI_MAPS_API_KEY
+      ```
 
 ## One-time: store presence (minimum for internal testing)
 
@@ -48,12 +59,17 @@ already runs TestFlight.
 
 - [ ] Regenerate the seed catalog (`scripts/generate-seed-catalog.py`) — the
       seed is refreshed manually per release.
-- [ ] Bump `versionCode` (and `versionName` when user-facing) in
-      `app/build.gradle.kts`. A curated "Was ist neu" additionally
-      needs the version in `WelcomeGate.curatedVersions` + a
-      `WhatsNewContent` entry.
-- [ ] `./gradlew :app:bundleRelease`; smoke-test the release build (not the
-      debug build) on the AVD before uploading.
+- [ ] A curated "Was ist neu" needs the new version in
+      `WelcomeGate.curatedVersions` + a `WhatsNewContent` entry, merged
+      before cutting the release.
+- [ ] Run the **Release** workflow (Actions → Release → Run workflow, from
+      `main`) with the new `versionName`. It increments `versionCode`,
+      runs the tests, builds the signed AAB, commits the bump, tags
+      `v<version>` and publishes a GitHub release with the AAB and the R8
+      mapping. The bump commit is pushed with the workflow token, so CI does
+      not run on it again (the release build already covered it).
+- [ ] Download the AAB from the GitHub release; smoke-test the release build
+      (not the debug build) on the AVD before uploading.
 - [ ] Upload the AAB to the internal-testing track, release notes DE/EN.
 - [ ] First time only: add the tester e-mail list (≤ 100 for internal
       testing) and share the opt-in link. Testers accept once and get every
