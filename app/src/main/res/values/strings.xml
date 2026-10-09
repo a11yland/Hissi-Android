@@ -9,6 +9,7 @@
     <string name="title_search">Suche</string>
     <string name="search_prompt">Station finden</string>
     <string name="clear_search">Suche löschen</string>
+    <string name="close_search">Suche schließen</string>
 
     <string name="no_favorites_title">Keine Favoriten</string>
     <string name="no_favorites_hint">Tippe unten ins Suchfeld, um Aufzüge zu finden und hinzuzufügen.</string>

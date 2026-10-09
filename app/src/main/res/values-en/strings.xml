@@ -7,6 +7,7 @@
     <string name="title_search">Search</string>
     <string name="search_prompt">Find a station</string>
     <string name="clear_search">Clear search</string>
+    <string name="close_search">Close search</string>
 
     <string name="no_favorites_title">No Favorites</string>
     <string name="no_favorites_hint">Tap the search field below to find and add elevators.</string>
