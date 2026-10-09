@@ -1,4 +1,4 @@
-name: Android
+name: CI
 
 # Pull requests cover the feature branches, so the push trigger is limited to
 # main.
