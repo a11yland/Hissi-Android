@@ -20,6 +20,13 @@ the platform-free logic, hand-ported from the iOS app's `Shared/`
 `hissi.mapsApiKey` (Maps SDK key, restricted to package + signing SHA-1) and the
 `hissi.upload.*` Play upload keystore settings — see `app/build.gradle.kts`.
 
+Without a valid Maps key the station map snippet stays blank (the SDK logs
+`Authorization failure` under the `Google Android Maps SDK` tag). The key is
+restricted per signing certificate, so a fresh machine's debug keystore must be
+added to the key in the Cloud Console (package `com.a11yland.Hissi` plus the
+`debug` SHA-1 from `./gradlew :app:signingReport`) before local builds render
+the map.
+
 ## Shared with the iOS app
 
 - `app/src/main/assets/seed-catalog.json` — the bundled seed catalog, generated
