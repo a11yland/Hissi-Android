@@ -5,6 +5,8 @@ agp = "9.4.1"
 kotlin = "2.2.10"
 composeBom = "2026.08.00"
 activityCompose = "1.13.0"
+# Transitive via activity-compose/maps; pinned so Play's SDK check sees a current release.
+fragment = "1.8.9"
 coreKtx = "1.19.0"
 # Ktor/serialization/coroutines are pinned to releases built with Kotlin <= 2.2
 # so their metadata stays readable for the 2.2.10 compiler above.
@@ -40,6 +42,7 @@ glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", versi
 androidx-work-runtime = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workManager" }
 glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
 reorderable = { group = "sh.calvin.reorderable", name = "reorderable", version.ref = "reorderable" }
+androidx-fragment = { group = "androidx.fragment", name = "fragment", version.ref = "fragment" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
