@@ -34,8 +34,8 @@ android {
         applicationId = "com.a11yland.Hissi"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.1.1"
+        versionCode = 4
+        versionName = "1.2"
         // Escaped: a token containing " or \ must not break the generated
         // source with a cryptic compile error.
         val escapedToken = transitToken.replace("\\", "\\\\").replace("\"", "\\\"")
