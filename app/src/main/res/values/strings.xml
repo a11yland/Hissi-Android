@@ -109,10 +109,9 @@
 
     <string name="widget_name">Aufzug-Status</string>
     <string name="widget_description">Status der überwachten Aufzüge.</string>
-    <string name="widget_all">Alle</string>
-    <string name="widget_in_service">in Betrieb</string>
     <string name="widget_out_of_service">außer Betrieb</string>
     <string name="widget_unknown">unbekannt</string>
+    <string name="nearby_all_in_service">In der Nähe alle in Betrieb</string>
     <string name="nearby_widget_name">In der Nähe</string>
     <string name="nearby_widget_description">Stationen mit Aufzug in Fußweite und ihr Status.</string>
     <string name="widget_location_allow">Standort in der App erlauben</string>

@@ -107,6 +107,7 @@ private val statusRed =
 
 @Composable
 private fun WidgetContent(elevators: List<MonitoredElevator>) {
+    val context = LocalContext.current
     val size = LocalSize.current
     val summary = ElevatorSummary.of(elevators)
     // The whole widget opens the app — there is no deeper target to offer.
@@ -123,6 +124,14 @@ private fun WidgetContent(elevators: List<MonitoredElevator>) {
     }
     when {
         summary.verdict == ElevatorSummary.Verdict.NoFavorites -> NoFavorites(root)
+        // A working elevator is no news: the all-clear lists nothing, the
+        // mark takes the room and the verdict is the one line.
+        summary.verdict == ElevatorSummary.Verdict.AllWorking ->
+            AllClear(
+                label = summaryLabel(context, summary),
+                markSize = if (size.height >= 250.dp || size.width >= 250.dp) 72.dp else 56.dp,
+                modifier = root,
+            )
         size.height >= 250.dp && size.width >= 250.dp ->
             ElevatorList(elevators, summary, maxRows = 8, showsHeader = true, modifier = root)
         // A tall-but-narrow shape (2xN) still fits a list — just not the
@@ -160,8 +169,42 @@ private fun NoFavorites(modifier: GlanceModifier) {
     }
 }
 
+// The all-clear, shared by every size (and the nearby widget): the app's
+// mark large and the verdict in one line, in the status pair — the same
+// wording every other surface speaks. The launcher foreground carries the
+// adaptive icon's safe-zone padding, hence the generous size.
+@Composable
+internal fun AllClear(label: String, markSize: androidx.compose.ui.unit.Dp, modifier: GlanceModifier) {
+    Column(
+        modifier = modifier.semantics { contentDescription = label },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Image(
+            provider = ImageProvider(R.drawable.ic_launcher_foreground),
+            contentDescription = null,
+            modifier = GlanceModifier.size(markSize),
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Image(
+                provider = ImageProvider(R.drawable.ic_widget_check_circle),
+                contentDescription = null,
+                modifier = GlanceModifier.size(16.dp),
+                colorFilter = ColorFilter.tint(statusGreen),
+            )
+            Spacer(GlanceModifier.width(5.dp))
+            Text(
+                label,
+                style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium, color = statusGreen),
+                maxLines = 1,
+            )
+        }
+    }
+}
+
 // The small tile: the aggregate verdict as icon, count and word — the answer
-// to "is my route okay?" at a glance.
+// to "is my route okay?" at a glance. Never the all-clear, which AllClear
+// draws.
 @Composable
 private fun Verdict(summary: ElevatorSummary, modifier: GlanceModifier) {
     val context = LocalContext.current
@@ -173,13 +216,9 @@ private fun Verdict(summary: ElevatorSummary, modifier: GlanceModifier) {
             big = "${summary.brokenCount}"
             caption = context.getString(R.string.widget_out_of_service)
         }
-        ElevatorSummary.Verdict.Unknown, ElevatorSummary.Verdict.AwaitingSync -> {
+        else -> {
             big = "${summary.unknownCount}"
             caption = context.getString(R.string.widget_unknown)
-        }
-        else -> {
-            big = context.getString(R.string.widget_all)
-            caption = context.getString(R.string.widget_in_service)
         }
     }
     Column(
@@ -206,9 +245,11 @@ private fun Verdict(summary: ElevatorSummary, modifier: GlanceModifier) {
     }
 }
 
-// The row list: same rows at every size, different cap. The tallest size is
-// the one that answers "show me everything", so it also gets the aggregate
-// verdict as a header — the medium row has no room to spare for it.
+// The row list: the elevators that are *not* working — broken first, then
+// unknown — at every size, different cap; a working elevator is no news.
+// The tallest size is the one that answers "show me everything", so it also
+// gets the aggregate verdict as a header — the medium row has no room to
+// spare for it.
 @Composable
 private fun ElevatorList(
     elevators: List<MonitoredElevator>,
@@ -218,8 +259,9 @@ private fun ElevatorList(
     modifier: GlanceModifier,
 ) {
     val context = LocalContext.current
-    // Broken elevators must survive the cap — the shared urgency order.
-    val ranked = ElevatorRanking.byUrgency(elevators)
+    // Broken elevators first — the shared urgency order — and only what is
+    // not working.
+    val affected = ElevatorRanking.byUrgency(elevators).filter { it.isWorking != true }
     Column(modifier = modifier) {
         if (showsHeader) {
             val label = summaryLabel(context, summary)
@@ -246,12 +288,12 @@ private fun ElevatorList(
                 )
             }
         }
-        ranked.take(maxRows).forEach { elevator ->
+        affected.take(maxRows).forEach { elevator ->
             ElevatorRow(elevator)
         }
-        if (elevators.size > maxRows) {
+        if (affected.size > maxRows) {
             Text(
-                context.getString(R.string.widget_more, elevators.size - maxRows),
+                context.getString(R.string.widget_more, affected.size - maxRows),
                 style = TextStyle(fontSize = 11.sp, color = GlanceTheme.colors.onSurfaceVariant),
             )
         }

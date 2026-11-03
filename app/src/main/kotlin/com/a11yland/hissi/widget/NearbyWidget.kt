@@ -165,14 +165,25 @@ private fun NearbyContent(state: NearbyWidgetState) {
             Notice(context.getString(R.string.widget_location_allow), root)
         NearbyWidgetState.NoFix ->
             Notice(context.getString(R.string.widget_location_unavailable), root)
-        is NearbyWidgetState.Located -> when {
-            state.stations.isEmpty() -> Notice(
-                context.getString(R.string.nearby_none_found),
-                root,
-            )
-            size.height >= 250.dp -> StationList(state.stations, maxRows = 8, modifier = root)
-            size.width >= 250.dp -> StationList(state.stations, maxRows = 3, modifier = root)
-            else -> Nearest(state.stations.first(), root)
+        // Only what is not working makes a row — a station whose lifts all
+        // run is no news. With every nearby lift working, the mark takes the
+        // room and the verdict is one line, like the status widget's all-clear.
+        is NearbyWidgetState.Located -> {
+            val affected = state.stations.filter { it.status != ElevatorStatus.Working }
+            when {
+                state.stations.isEmpty() -> Notice(
+                    context.getString(R.string.nearby_none_found),
+                    root,
+                )
+                affected.isEmpty() -> AllClear(
+                    label = context.getString(R.string.nearby_all_in_service),
+                    markSize = if (size.height >= 250.dp || size.width >= 250.dp) 72.dp else 56.dp,
+                    modifier = root,
+                )
+                size.height >= 250.dp -> StationList(affected, maxRows = 8, modifier = root)
+                size.width >= 250.dp -> StationList(affected, maxRows = 3, modifier = root)
+                else -> Nearest(affected.first(), root)
+            }
         }
     }
 }

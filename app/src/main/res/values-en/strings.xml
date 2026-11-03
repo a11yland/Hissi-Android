@@ -107,10 +107,9 @@
 
     <string name="widget_name">Elevator status</string>
     <string name="widget_description">Status of your monitored elevators.</string>
-    <string name="widget_all">All</string>
-    <string name="widget_in_service">in service</string>
     <string name="widget_out_of_service">out of service</string>
     <string name="widget_unknown">unknown</string>
+    <string name="nearby_all_in_service">All nearby in service</string>
     <string name="nearby_widget_name">Nearby</string>
     <string name="nearby_widget_description">Stations with elevators within walking distance and their status.</string>
     <string name="widget_location_allow">Allow location in the app</string>
