@@ -219,7 +219,7 @@ fun NearbySection(search: SearchViewModel, onSelect: (String) -> Unit) {
             NearbyState.Located -> Column {
                 if (hasLoaded && stations.isEmpty()) {
                     Text(
-                        stringResource(R.string.nearby_none_within, radiusLabel),
+                        stringResource(R.string.nearby_none_found),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

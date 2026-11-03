@@ -89,7 +89,7 @@
     <string name="nearby_title">In der Nähe</string>
     <string name="nearby_show">Stationen in der Nähe anzeigen</string>
     <string name="nearby_radius">bis %1$s zu Fuß</string>
-    <string name="nearby_none_within">Keine Station mit Aufzug im Umkreis von %1$s.</string>
+    <string name="nearby_none_found">Keine Station mit Aufzug in der Nähe gefunden.</string>
     <string name="nearby_broken_ratio">%1$d von %2$d außer Betrieb</string>
     <string name="nearby_unknown_ratio">%1$d von %2$d unbekannt</string>
     <string name="all_working">Alle in Betrieb</string>

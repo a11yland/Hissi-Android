@@ -165,7 +165,7 @@ private fun NearbyContent(state: NearbyWidgetState) {
             Notice(context.getString(R.string.widget_location_unavailable), root)
         is NearbyWidgetState.Located -> when {
             state.stations.isEmpty() -> Notice(
-                context.getString(R.string.nearby_none_within, distanceLabel(NearbyStations.WALKING_RADIUS_METERS)),
+                context.getString(R.string.nearby_none_found),
                 root,
             )
             size.height >= 250.dp -> StationList(state.stations, maxRows = 8, modifier = root)

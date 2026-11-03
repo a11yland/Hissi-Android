@@ -87,7 +87,7 @@
     <string name="nearby_title">Nearby</string>
     <string name="nearby_show">Show nearby stations</string>
     <string name="nearby_radius">up to %1$s on foot</string>
-    <string name="nearby_none_within">No station with an elevator within %1$s.</string>
+    <string name="nearby_none_found">No station with an elevator found nearby.</string>
     <string name="nearby_broken_ratio">%1$d of %2$d out of service</string>
     <string name="nearby_unknown_ratio">%1$d of %2$d unknown</string>
     <string name="all_working">All in service</string>
