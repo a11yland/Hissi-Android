@@ -120,8 +120,8 @@ object EquipmentCatalog {
 
     // What a live record the inventory number answered incompletely (or not
     // at all) still gets from the seed: the metadata that holds for a whole
-    // station. The API serves neither coordinates nor source/operator names,
-    // so without this an unmatched record loses its map and both name rows in
+    // station. The API serves no source/operator names and no coordinates for
+    // some records, so without this an unmatched record loses its map and both name rows in
     // the detail view — even though the bundle knows the station. Two guards
     // keep the fallback honest: it only fills what is still missing (live
     // always wins), and source/operator are adopted only when every seed

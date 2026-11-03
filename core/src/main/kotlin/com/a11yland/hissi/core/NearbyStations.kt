@@ -12,7 +12,7 @@ import kotlin.math.sqrt
 // coordinate. Ported from `Shared/NearbyStations.swift`.
 //
 // Distance and status read different slices of the same station: coordinates
-// come from the seed overlay, so a station without any stays out entirely,
+// come from the live centroid or the seed overlay, so a station without any stays out entirely,
 // but an elevator without coordinates still counts towards the station's
 // status — it is one of the lifts the user would take.
 object NearbyStations {

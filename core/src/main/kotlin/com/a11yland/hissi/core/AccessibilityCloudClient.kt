@@ -426,9 +426,17 @@ object AccessibilityCloudClient {
             return null
         }
 
-        // Coordinates as GeoJSON geometry ([longitude, latitude]) or flat
-        // latitude/longitude fields. Returns (latitude, longitude).
+        // Coordinates: the elevator's own `location.centroid` (what the API
+        // serves today — [longitude, latitude]; `stopPlaceCentroid` next to it
+        // is null so far but is the station-level fallback once it isn't), a
+        // GeoJSON `geometry` or flat latitude/longitude fields. Returns
+        // (latitude, longitude).
         fun point(json: JsonObject): Pair<Double, Double>? {
+            val location = json["location"] as? JsonObject
+            for (key in listOf("centroid", "stopPlaceCentroid")) {
+                val pair = (location?.get(key) as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.doubleOrNull }
+                if (pair?.size == 2) return pair[1] to pair[0]
+            }
             val coordinates = ((json["geometry"] as? JsonObject)?.get("coordinates") as? JsonArray)
                 ?.mapNotNull { (it as? JsonPrimitive)?.doubleOrNull }
             if (coordinates?.size == 2) return coordinates[1] to coordinates[0]

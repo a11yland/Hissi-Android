@@ -57,8 +57,12 @@ class ParseElevatorsTest {
     }
 
     @Test
-    fun decodesCoordinatesFromGeometryAndFlatFields() {
+    fun decodesCoordinatesFromCentroidGeometryAndFlatFields() {
         val elevators = AccessibilityCloudClient.parseElevators(fixtureData("elevators")).items
+        // The live shape: location.centroid, [longitude, latitude].
+        val centroid = assertNotNull(elevators.firstOrNull { it.id == "103" })
+        assertEquals(52.52, centroid.latitude)
+        assertEquals(13.4, centroid.longitude)
         // GeoJSON order is [longitude, latitude].
         val geo = assertNotNull(elevators.firstOrNull { it.id == "101" })
         assertEquals(52.43, geo.latitude)

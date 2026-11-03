@@ -90,6 +90,9 @@ class TransitApi(
                 ELEVATORS,
                 extraQuery = select(
                     listOf("function", "short_visual"), listOf("location", "site"),
+                    // The elevator's own coordinate — what places a station in
+                    // the nearby list and frames the detail map without the seed.
+                    listOf("location", "centroid"), listOf("location", "stopPlaceCentroid"),
                     listOf("operational_status", "operational_status"),
                     listOf("operational_status", "current_status_span"),
                     listOf("linked_data", "operator_inventory_id"),
@@ -143,6 +146,7 @@ class TransitApi(
         if (ids.isEmpty()) return emptyList()
         val query = select(
             listOf("function", "short_visual"),
+            listOf("location", "centroid"), listOf("location", "stopPlaceCentroid"),
             listOf("operational_status", "operational_status"),
             listOf("operational_status", "current_status_span"),
             listOf("linked_data", "operator_inventory_id"),
