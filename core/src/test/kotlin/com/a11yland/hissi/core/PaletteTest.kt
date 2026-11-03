@@ -69,6 +69,26 @@ class PaletteTest {
     }
 
     @Test
+    fun statusSymbolsAreVisibleOnEveryGround() {
+        for (color in Palette.lightSymbolColors) {
+            for (ground in Palette.lightGrounds) {
+                assertTrue(
+                    WcagContrast.ratio(color, ground) >= Palette.NON_TEXT_CONTRAST,
+                    "$color light on $ground",
+                )
+            }
+        }
+        for (color in Palette.darkSymbolColors) {
+            for (ground in Palette.darkGrounds) {
+                assertTrue(
+                    WcagContrast.ratio(color, ground) >= Palette.NON_TEXT_CONTRAST,
+                    "$color dark on $ground",
+                )
+            }
+        }
+    }
+
+    @Test
     fun badgesCarryWhiteTextAtEnhancedContrast() {
         for (badge in Palette.badges) {
             assertTrue(WcagContrast.ratio("#FFFFFF", badge) >= Palette.ENHANCED_TEXT_CONTRAST, badge)

@@ -261,7 +261,7 @@ private fun NearbyStationRow(station: NearbyStations.Station, onSelect: () -> Un
             Text(
                 station.name,
                 style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
+                maxLines = 2,
             )
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -278,7 +278,7 @@ private fun NearbyStationRow(station: NearbyStations.Station, onSelect: () -> Un
                     stationStatusText(station),
                     style = MaterialTheme.typography.bodySmall,
                     color = color,
-                    maxLines = 1,
+                    maxLines = 2,
                 )
             }
         }

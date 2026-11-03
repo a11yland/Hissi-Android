@@ -84,7 +84,10 @@ fun MapSnippet(
     val position = LatLng(latitude, longitude)
     val initialCamera = CameraPosition.fromLatLngZoom(position, 16f)
     val camera = rememberCameraPositionState { this.position = initialCamera }
-    val label = stringResource(R.string.map_snippet_label, stationName)
+    // The capsule's text is what is visible, so it has to be part of the
+    // one accessible name — Voice Access matches what the user can read.
+    val label = stringResource(R.string.map_snippet_label, stationName) +
+        ", " + stringResource(R.string.open_in_maps)
     val actionBlue = MaterialTheme.colorScheme.primary
     // The MapView spawns with a world-spanning default camera and applies the
     // compose camera state only after initialization — seeding the options

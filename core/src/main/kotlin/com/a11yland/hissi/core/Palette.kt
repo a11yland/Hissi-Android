@@ -43,7 +43,7 @@ object Palette {
     const val STATUS_OK_SYMBOL_DARK = "#3FE0C5"
     const val STATUS_OK_TEXT_LIGHT = "#006B5C"
     const val STATUS_OK_TEXT_DARK = "#3FE0C5"
-    const val STATUS_UNKNOWN_SYMBOL_LIGHT = "#D97706"
+    const val STATUS_UNKNOWN_SYMBOL_LIGHT = "#C46A00"
     const val STATUS_UNKNOWN_SYMBOL_DARK = "#FBBF24"
     const val STATUS_UNKNOWN_TEXT_LIGHT = "#8A4B08"
     const val STATUS_UNKNOWN_TEXT_DARK = "#FBBF24"
@@ -72,6 +72,13 @@ object Palette {
     val lightGrounds: List<String> = listOf(BACKGROUND_LIGHT, SURFACE_LIGHT, SURFACE_HIGH_LIGHT)
     val darkGrounds: List<String> = listOf(BACKGROUND_DARK, SURFACE_DARK, SURFACE_HIGH_DARK)
 
+    // The symbol colours: not text, but they still have to be seen against
+    // the ground (3:1 — WCAG 2.2 SC 1.4.11); the amber was 2.9:1 on cream once.
+    val lightSymbolColors: List<String> =
+        listOf(STATUS_OK_SYMBOL_LIGHT, STATUS_UNKNOWN_SYMBOL_LIGHT, STATUS_DOWN_SYMBOL_LIGHT)
+    val darkSymbolColors: List<String> =
+        listOf(STATUS_OK_SYMBOL_DARK, STATUS_UNKNOWN_SYMBOL_DARK, STATUS_DOWN_SYMBOL_DARK)
+
     // The text colours that must read on every ground: the status words and
     // the secondary text (AA, 4.5:1 — WCAG 2.2 SC 1.4.3).
     val lightTextColors: List<String> =
@@ -88,6 +95,9 @@ object Palette {
     // WCAG 2.2 SC 1.4.6 (AAA) and SC 1.4.3 (AA) for normal text.
     const val ENHANCED_TEXT_CONTRAST = 7.0
     const val MINIMUM_TEXT_CONTRAST = 4.5
+
+    // WCAG 2.2 SC 1.4.11 (non-text contrast) for the status symbols.
+    const val NON_TEXT_CONTRAST = 3.0
 }
 
 object WcagContrast {

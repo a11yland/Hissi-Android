@@ -135,11 +135,13 @@ fun SearchResultsContent(
 // phase and the live refresh is still pending.
 @Composable
 private fun RefreshingNotice() {
+    // Announced when it appears — otherwise a TalkBack user reading the rows
+    // never learns that they are the stale phase.
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 10.dp)
-            .semantics(mergeDescendants = true) {},
+            .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
