@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -37,8 +36,9 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.a11yland.hissi.R
 
-// The disruption-alerts opt-in, sitting above the favorites list like the iOS
-// LiveStatusSection — the surface it reports on. The system permission dialog
+// The disruption-alerts opt-in — the Android counterpart of the iOS live
+// status, and like it behind the bell in the favorites app bar (AlertsSheet
+// in ContentScreen) rather than a row above the list. The system permission dialog
 // fires only from the toggle (in-context, mirroring the location rule), never
 // from launching the app.
 //
@@ -144,8 +144,6 @@ fun AlertsSection(enabled: Boolean, onSetEnabled: (Boolean) -> Unit) {
                 }
             }
         }
-
-        HorizontalDivider()
     }
 }
 

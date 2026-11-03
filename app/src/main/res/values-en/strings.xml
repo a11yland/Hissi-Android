@@ -11,6 +11,7 @@
 
     <string name="no_favorites_title">No Favorites</string>
     <string name="no_favorites_hint">Tap the search field below to find and add elevators.</string>
+    <string name="recents_clear">Clear recent searches</string>
     <string name="no_recents_hint">Your recent searches will appear here.</string>
     <string name="recent_remove">Remove “%1$s”</string>
 

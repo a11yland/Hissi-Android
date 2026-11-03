@@ -7,12 +7,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -27,8 +29,10 @@ import androidx.compose.ui.unit.dp
 import com.a11yland.hissi.R
 
 // Recent searches as tappable chips while the search field is focused and
-// empty — the Android counterpart of RecentSearchChips. (The nearby-stations
-// section follows as a later increment within phase 3.)
+// empty — the Android counterpart of RecentSearchChips: 44 dp tall like the
+// nearby button, so the screen's targets are one size. The bulk delete is
+// the "Letzte Suchen löschen" button ContentScreen pins above the search
+// field.
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RecentsContent(search: SearchViewModel, onPick: (String) -> Unit) {
@@ -44,11 +48,7 @@ fun RecentsContent(search: SearchViewModel, onPick: (String) -> Unit) {
         NearbySection(search = search, onSelect = onPick)
 
         if (recents.isEmpty()) {
-            Text(
-                stringResource(R.string.no_recents_hint),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            NoticeCard(text = stringResource(R.string.no_recents_hint), icon = Icons.Filled.History)
         } else {
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -57,15 +57,17 @@ fun RecentsContent(search: SearchViewModel, onPick: (String) -> Unit) {
                 for (term in recents) {
                     AssistChip(
                         onClick = { onPick(term) },
-                        label = { Text(term) },
+                        // 44 dp — WCAG 2.5.5 (AAA) target size, the nearby
+                        // button's height; the default chip is 32 dp.
+                        modifier = Modifier.height(44.dp),
+                        label = { Text(term, style = MaterialTheme.typography.bodyLarge) },
                         trailingIcon = {
                             val removeLabel = stringResource(R.string.recent_remove, term)
-                            // The tap target fills the chip height (32 dp) —
-                            // a bare 16 dp icon is untappable; 48 dp would
-                            // blow the chip up.
+                            // The tap target fills the chip height — a bare
+                            // 16 dp icon is untappable.
                             Box(
                                 modifier = Modifier
-                                    .size(32.dp)
+                                    .size(44.dp)
                                     .clickable(onClickLabel = removeLabel) {
                                         search.removeRecent(term)
                                     },

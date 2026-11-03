@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Tram
 import androidx.compose.material3.CircularProgressIndicator
@@ -174,7 +176,8 @@ fun NearbySection(search: SearchViewModel, onSelect: (String) -> Unit) {
         }
 
         when (state) {
-            NearbyState.Idle -> OutlinedButton(onClick = requestLocation) {
+            // 44 dp like the pinned nearby button — the two read as one entry.
+            NearbyState.Idle -> OutlinedButton(onClick = requestLocation, modifier = Modifier.heightIn(min = 44.dp)) {
                 Icon(Icons.Filled.LocationOn, contentDescription = null)
                 Text(
                     stringResource(R.string.nearby_show),
@@ -218,10 +221,9 @@ fun NearbySection(search: SearchViewModel, onSelect: (String) -> Unit) {
 
             NearbyState.Located -> Column {
                 if (hasLoaded && stations.isEmpty()) {
-                    Text(
-                        stringResource(R.string.nearby_none_found),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    NoticeCard(
+                        text = stringResource(R.string.nearby_none_found),
+                        icon = Icons.Filled.LocationOff,
                     )
                 }
                 stations.forEachIndexed { index, station ->

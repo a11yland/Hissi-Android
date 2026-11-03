@@ -86,6 +86,15 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.text.font.FontWeight
 
 // The single screen, mirroring the iOS ContentView: a persistent bottom
 // search field, above which the area shows the favorites by default, the
@@ -220,6 +229,17 @@ fun ContentScreen(
     if (showsAbout) {
         AboutSheet(onDismiss = { showsAbout = false })
     }
+    // The disruption alerts behind the bell, like the iOS live status.
+    val alertsEnabled by monitor.alertsEnabled.collectAsState()
+    var showsAlerts by rememberSaveable { mutableStateOf(false) }
+    if (showsAlerts) {
+        AlertsSheet(
+            enabled = alertsEnabled,
+            onSetEnabled = monitor::setAlertsEnabled,
+            onDismiss = { showsAlerts = false },
+        )
+    }
+    val recents by search.recents.collectAsState()
 
     Scaffold(
         // Keeps the bottom search field above the keyboard instead of the
@@ -232,17 +252,9 @@ fun ContentScreen(
                         AppIcon(size = 28.dp, cornerRadius = 6.dp)
                     }
                 },
-                title = {
-                    Text(
-                        stringResource(
-                            when (mode) {
-                                Mode.Favorites -> R.string.title_favorites
-                                Mode.Recents -> R.string.title_recents
-                                Mode.Results -> R.string.title_search
-                            },
-                        ),
-                    )
-                },
+                // Empty on purpose: the mode's headline sits below the bar,
+                // large and left-aligned, like the iOS screen.
+                title = {},
                 actions = {
                     if (mode == Mode.Favorites && favorites.size > 1) {
                         SortMenu(monitor)
@@ -272,12 +284,44 @@ fun ContentScreen(
                             ),
                         )
                     }
+                    // The alerts cover the whole favorites set, so they are an
+                    // action of this screen — the bell, filled while they are
+                    // on. Only with favorites: nothing to report on otherwise.
+                    if (mode == Mode.Favorites && favorites.isNotEmpty()) {
+                        IconButton(onClick = { showsAlerts = true }) {
+                            Icon(
+                                if (alertsEnabled) Icons.Filled.NotificationsActive
+                                else Icons.Outlined.Notifications,
+                                contentDescription = stringResource(R.string.alerts_title),
+                            )
+                        }
+                    }
                 },
             )
         },
         bottomBar = {
             Surface(tonalElevation = 3.dp) {
-                OutlinedTextField(
+                Column {
+                    // One action per mode, pinned right above the search
+                    // field so a long list never hides it: the nearby entry
+                    // on the favorites (while the search is up, nearby is
+                    // already in view), the bulk delete on the recents.
+                    when (mode) {
+                        Mode.Favorites -> PinnedAction(
+                            text = stringResource(R.string.nearby_show),
+                            icon = Icons.Filled.LocationOn,
+                            onClick = showNearby,
+                        )
+                        Mode.Recents -> if (recents.isNotEmpty()) {
+                            PinnedAction(
+                                text = stringResource(R.string.recents_clear),
+                                icon = Icons.Filled.Delete,
+                                onClick = search::clearRecents,
+                            )
+                        }
+                        Mode.Results -> Unit
+                    }
+                    OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
                     // Scaffold's bottomBar slot applies no insets of its own —
@@ -315,15 +359,19 @@ fun ContentScreen(
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { search.addRecent(query) }),
                 )
+                }
             }
         },
     ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
+        Column(modifier = Modifier.padding(padding)) {
+            Headline(
+                mode = mode,
+                lastChecked = favorites.mapNotNull { it.lastChecked }.maxOrNull(),
+            )
             when (mode) {
                 Mode.Favorites -> FavoritesContent(
                     monitor = monitor,
                     onOpen = { selected = it },
-                    onShowNearby = showNearby,
                 )
                 Mode.Recents -> RecentsContent(
                     search = search,
@@ -343,13 +391,57 @@ fun ContentScreen(
     }
 }
 
-// "Stationen in der Nähe anzeigen" — the same wording and glyph as the
-// nearby section's own opt-in button, so the two read as one entry.
+// The mode's headline below the app bar, not in it: large and left-aligned,
+// outside the scrolling content so it stays while the list moves. The
+// favorites carry the poll time at its right — one shared poll covers all of
+// them, so "checked" is global (the rows show the source's data age).
 @Composable
-private fun NearbyEntryButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    OutlinedButton(onClick = onClick, modifier = modifier) {
-        Icon(Icons.Filled.LocationOn, contentDescription = null)
-        Text(stringResource(R.string.nearby_show), modifier = Modifier.padding(start = 8.dp))
+private fun Headline(mode: Mode, lastChecked: java.time.Instant?) {
+    Row(
+        verticalAlignment = Alignment.Bottom,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(top = 4.dp, bottom = 8.dp),
+    ) {
+        Text(
+            stringResource(
+                when (mode) {
+                    Mode.Favorites -> R.string.title_favorites
+                    Mode.Recents -> R.string.title_recents
+                    Mode.Results -> R.string.title_search
+                },
+            ),
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f).semantics { heading() },
+        )
+        if (mode == Mode.Favorites && lastChecked != null) {
+            Text(
+                stringResource(R.string.checked_at, relativeTimeText(lastChecked)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 12.dp, bottom = 6.dp),
+            )
+        }
+    }
+}
+
+// The action pinned above the search field: centered, 44 dp tall — WCAG
+// 2.5.5 (AAA) target size; the default outlined button is 40 dp.
+@Composable
+private fun PinnedAction(text: String, icon: ImageVector, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(top = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        OutlinedButton(onClick = onClick, modifier = Modifier.heightIn(min = 44.dp)) {
+            Icon(icon, contentDescription = null)
+            Text(text, modifier = Modifier.padding(start = 8.dp))
+        }
     }
 }
 
@@ -371,7 +463,6 @@ private val monitoredElevatorSaver = Saver<MonitoredElevator?, String>(
 private fun FavoritesContent(
     monitor: MonitorViewModel,
     onOpen: (MonitoredElevator) -> Unit,
-    onShowNearby: () -> Unit,
 ) {
     val favorites by monitor.favorites.collectAsState()
     val isRefreshing by monitor.isLoading.collectAsState()
@@ -402,7 +493,6 @@ private fun FavoritesContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
-            NearbyEntryButton(onClick = onShowNearby, modifier = Modifier.padding(top = 8.dp))
         }
         return
     }
@@ -412,11 +502,8 @@ private fun FavoritesContent(
     // Reihenfolge" (committed on drop, MonitorViewModel).
     val listState = rememberLazyListState()
     val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
-        // Offset by the alerts section and the nearby entry, which sit at
-        // LazyColumn indices 0 and 1.
-        monitor.move(from.index - 2, to.index - 2)
+        monitor.move(from.index, to.index)
     }
-    val alertsEnabled by monitor.alertsEnabled.collectAsState()
 
     // A drag tells you where the row landed by looking at it; the move
     // actions below don't, so say it. 1-based, like the iOS announcement.
@@ -446,19 +533,6 @@ private fun FavoritesContent(
                 },
         )
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-            // Above the list like the iOS LiveStatusSection — the alerts
-            // report on exactly these favorites.
-            item(key = "alerts-section") {
-                AlertsSection(enabled = alertsEnabled, onSetEnabled = monitor::setAlertsEnabled)
-            }
-            // Same entry as the empty state's button, above the favorites
-            // (the list can run long, the entry must not sit under it).
-            item(key = "nearby-entry") {
-                NearbyEntryButton(
-                    onClick = onShowNearby,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
             itemsIndexed(favorites, key = { _, elevator -> elevator.id }) { index, elevator ->
                 ReorderableItem(reorderableState, key = elevator.id) { isDragging ->
                     Surface(shadowElevation = if (isDragging) 4.dp else 0.dp) {
@@ -514,11 +588,8 @@ private fun FavoritesContent(
                     }
                 }
             }
-            item {
-                FavoritesFooter(
-                    lastChecked = favorites.mapNotNull { it.lastChecked }.maxOrNull(),
-                    errorRes = errorRes,
-                )
+            errorRes?.let { res ->
+                item(key = "error") { RefreshError(res) }
             }
         }
     }
@@ -561,34 +632,40 @@ private val FavoritesOrder.labelRes: Int
         FavoritesOrder.MANUAL -> R.string.order_manual
     }
 
+// A failed refresh, under the list. Live region: the silent overlay would
+// otherwise never reach TalkBack users (mirrors the iOS announcement). The
+// poll time moved up next to the headline; the data attribution lives in
+// the about sheet, the one place that carries it.
 @Composable
-private fun FavoritesFooter(lastChecked: java.time.Instant?, errorRes: Int?) {
-    Column(
+private fun RefreshError(errorRes: Int) {
+    Text(
+        stringResource(errorRes),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.error,
+        textAlign = TextAlign.Center,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        if (errorRes != null) {
-            // Live region: the silent overlay would otherwise never reach
-            // TalkBack users (mirrors the iOS accessibility announcement).
-            Text(
-                stringResource(errorRes),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-            )
+            .padding(16.dp)
+            .semantics { liveRegion = LiveRegionMode.Polite },
+    )
+}
+
+// The alerts opt-in as a sheet behind the bell — the counterpart of the iOS
+// LiveStatusSheet: one card, sized to its content.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AlertsSheet(enabled: Boolean, onSetEnabled: (Boolean) -> Unit, onDismiss: () -> Unit) {
+    // On the screen ground, so the card reads as a card — like the iOS sheet.
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.background) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp),
+        ) {
+            AlertsSection(enabled = enabled, onSetEnabled = onSetEnabled)
         }
-        // One shared poll covers all favorites, so "checked" is global; the
-        // per-row line shows the source's data age.
-        if (lastChecked != null) {
-            Text(
-                stringResource(R.string.checked_at, relativeTimeText(lastChecked)),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        AttributionFooter()
     }
 }

@@ -13,6 +13,7 @@
 
     <string name="no_favorites_title">Keine Favoriten</string>
     <string name="no_favorites_hint">Tippe unten ins Suchfeld, um Aufzüge zu finden und hinzuzufügen.</string>
+    <string name="recents_clear">Letzte Suchen löschen</string>
     <string name="no_recents_hint">Deine letzten Suchen erscheinen hier.</string>
     <string name="recent_remove">„%1$s“ entfernen</string>
 

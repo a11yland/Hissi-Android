@@ -61,6 +61,10 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch { recentsStore.await().remove(query) }
     }
 
+    fun clearRecents() {
+        viewModelScope.launch { recentsStore.await().clear() }
+    }
+
     // The favorites screen's "Stationen in der Nähe anzeigen" entry: the app
     // focuses the search field (which shows the nearby section) and raises
     // this flag; the section consumes it and starts locating without a
