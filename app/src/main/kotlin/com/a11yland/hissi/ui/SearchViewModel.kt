@@ -96,9 +96,11 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     // coordinates); the seed carries the sort when no snapshot exists yet.
     suspend fun nearbyStations(latitude: Double, longitude: Double): List<NearbyStations.Station> {
         val seed = container.seed()
+        val stations = container.seedStations()
         val snapshot = container.catalog().snapshot()
         return withContext(Dispatchers.Default) {
-            val catalog = snapshot ?: EquipmentCatalog.overlaid(live = emptyList(), seed = seed)
+            val catalog = snapshot
+                ?: EquipmentCatalog.overlaid(live = emptyList(), seed = seed, stations = stations)
             NearbyStations.nearest(latitude, longitude, catalog)
         }
     }
@@ -143,8 +145,9 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                 _regions.value = grouped(trimmed, snapshot)
             } else {
                 val seedRecords = container.seed()
+                val seedStations = container.seedStations()
                 val seed = withContext(Dispatchers.Default) {
-                    EquipmentCatalog.overlaid(live = emptyList(), seed = seedRecords)
+                    EquipmentCatalog.overlaid(live = emptyList(), seed = seedRecords, stations = seedStations)
                 }
                 if (seed.isNotEmpty()) {
                     _regions.value = grouped(trimmed, seed)

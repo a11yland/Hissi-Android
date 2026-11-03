@@ -102,7 +102,9 @@ class NearbyWidget : GlanceAppWidget() {
         val container = (context.applicationContext as HissiApplication).container
         val catalog = container.catalog()
         val records = catalog.snapshot(rebuildingIfStale = false)
-            ?: EquipmentCatalog.overlaid(live = emptyList(), seed = container.seed())
+            ?: EquipmentCatalog.overlaid(
+                live = emptyList(), seed = container.seed(), stations = container.seedStations(),
+            )
         val stations = NearbyStations.nearest(fix.first, fix.second, records, limit = MAX_ROWS)
         if (stations.isEmpty()) return NearbyWidgetState.Located(emptyList())
         // Phase 2: live statuses for exactly these rows — free while the

@@ -26,6 +26,7 @@ class CatalogCache(
     private val ttl: Duration = Duration.ofMinutes(10),
     private val cacheFile: File?,
     private val seed: List<SeedCatalog.Record> = emptyList(),
+    private val stations: List<SeedCatalog.Station> = emptyList(),
     // Builds run on this scope so a cancelled caller (every search keystroke
     // cancels its predecessor) does not abort the shared build.
     private val scope: CoroutineScope,
@@ -81,7 +82,7 @@ class CatalogCache(
         build.await()?.let { return it }
         mutex.withLock { cached.ifEmpty { null } }?.let { return it }
         val seedOnly = withContext(Dispatchers.Default) {
-            EquipmentCatalog.overlaid(live = emptyList(), seed = seed)
+            EquipmentCatalog.overlaid(live = emptyList(), seed = seed, stations = stations)
         }
         return seedOnly.ifEmpty { null }
     }
@@ -113,7 +114,7 @@ class CatalogCache(
             // A failed fetch degrades to the seed overlay: numeric favorites
             // stay unresolved (previous values survive), seed-id favorites
             // still answer — status unknown, never a false "working".
-            resolved = EquipmentCatalog.overlaid(live = live.orEmpty(), seed = seed)
+            resolved = EquipmentCatalog.overlaid(live = live.orEmpty(), seed = seed, stations = stations)
         }
         val byId = LinkedHashMap<String, AccessibilityCloudClient.Equipment>(resolved.size)
         for (record in resolved) byId.putIfAbsent(record.id, record)
@@ -130,6 +131,7 @@ class CatalogCache(
         if (missingSeedIds.isNotEmpty()) {
             val fallback = EquipmentCatalog.overlaid(
                 live = emptyList(),
+                stations = stations,
                 seed = seed.filter { it.id in missingSeedIds },
             )
             for (record in fallback) result[record.id] = record
@@ -151,7 +153,7 @@ class CatalogCache(
     ): List<AccessibilityCloudClient.Equipment>? = mutex.withLock {
         inFlight = null
         if (live == null) return null
-        cached = EquipmentCatalog.overlaid(live = live, seed = seed)
+        cached = EquipmentCatalog.overlaid(live = live, seed = seed, stations = stations)
         fetchedAt = Instant.now()
         persist(live)
         cached
@@ -174,7 +176,7 @@ class CatalogCache(
                 json.decodeFromString<PersistedCatalog>(file.readText())
             }.getOrNull() ?: return@withContext null
             if (persisted.live.isEmpty()) return@withContext null
-            EquipmentCatalog.overlaid(live = persisted.live, seed = seed) to
+            EquipmentCatalog.overlaid(live = persisted.live, seed = seed, stations = stations) to
                 persisted.fetchedAtEpochMillis
         } ?: return
         cached = loaded.first

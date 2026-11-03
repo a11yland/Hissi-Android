@@ -65,6 +65,15 @@ private val seedJSON = """
    "sourceName": "brokenlifts.org",
    "organizationName": "Berliner Verkehrsbetriebe (BVG)"
   }
+ ],
+ "stations": [
+  {
+   "stationId": "900100015",
+   "dhid": "de:11000:900100015",
+   "name": "Klosterstraße (Berlin)",
+   "latitude": 52.517229,
+   "longitude": 13.412455
+  }
  ]
 }
 """
@@ -87,6 +96,74 @@ class SeedCatalogTest {
     @Test
     fun unparseableDataYieldsEmpty() {
         assertTrue(SeedCatalog.parse("nonsense").isEmpty())
+    }
+
+    @Test
+    fun parsesTheStationListAndToleratesItsAbsence() {
+        val stations = SeedCatalog.parseStations(seedJSON)
+        assertEquals(1, stations.size)
+        assertEquals("900100015", stations.first().stationId)
+        assertEquals(52.517229, stations.first().latitude)
+        // A seed from before the list existed.
+        assertTrue(SeedCatalog.parseStations("""{"elevators": []}""").isEmpty())
+        assertTrue(SeedCatalog.parse("""{"elevators": []}""").isEmpty())
+    }
+}
+
+// The seed's station list: the station's own coordinate for a record that
+// nothing else places — a live record without a centroid at a station the
+// seed has no elevator for. Ported from StationCoordinateTests.
+class StationCoordinateTest {
+    private val seed get() = SeedCatalog.parse(seedJSON)
+    private val stations get() = SeedCatalog.parseStations(seedJSON)
+
+    private fun live(
+        stationId: String,
+        stationName: String,
+        inventoryId: String? = null,
+        latitude: Double? = null,
+        longitude: Double? = null,
+    ) = AccessibilityCloudClient.Equipment(
+        id = "6740", inventoryId = inventoryId, stationId = stationId, stationName = stationName,
+        description = "Straße ↔ Bahnsteig", isWorking = true, lastUpdateEpochMillis = null,
+        latitude = latitude, longitude = longitude,
+    )
+
+    @Test
+    fun placesARecordNothingElseCan() {
+        val merged = EquipmentCatalog.overlaid(
+            live = listOf(live("900100015", "Klosterstraße (Berlin)")),
+            seed = seed, stations = stations,
+        )
+        val record = assertNotNull(merged.firstOrNull { it.id == "6740" })
+        assertEquals(52.517229, record.latitude)
+        assertEquals(13.412455, record.longitude)
+    }
+
+    @Test
+    fun liveCentroidAndSeedSiblingsWin() {
+        val own = EquipmentCatalog.overlaid(
+            live = listOf(live("900100015", "Klosterstraße (Berlin)", latitude = 52.5, longitude = 13.4)),
+            seed = seed, stations = stations,
+        )
+        assertEquals(52.5, own.first().latitude)
+        // Waßmannsdorf: the matched seed record has no coordinates, its
+        // fasta sibling does — that sibling comes before the station list.
+        val sibling = EquipmentCatalog.overlaid(
+            live = listOf(live("900260022", "Waßmannsdorf", inventoryId = "10466002")),
+            seed = seed,
+            stations = listOf(SeedCatalog.Station("900260022", null, "Waßmannsdorf", 1.0, 1.0)),
+        )
+        assertEquals(52.3683272, assertNotNull(sibling.firstOrNull { it.id == "6740" }).latitude)
+    }
+
+    @Test
+    fun unknownStationStaysUnplaced() {
+        val merged = EquipmentCatalog.overlaid(
+            live = listOf(live("900000001", "Nirgendwo")),
+            seed = seed, stations = stations,
+        )
+        assertNull(merged.first().latitude)
     }
 }
 

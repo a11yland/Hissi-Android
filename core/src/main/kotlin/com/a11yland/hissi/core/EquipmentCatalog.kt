@@ -45,10 +45,15 @@ object EquipmentCatalog {
     // record would just sit next to the real elevators), and the entire seed
     // when offline. Unmatched accessibilityCloud records stay out either way
     // — their stations are live, appending them would duplicate elevators.
+    // Whatever still has no coordinate after all that takes the station's
+    // from the seed's `stations` list (keyed by the station number) — the
+    // last resort for a station whose records carry no centroid upstream.
     fun overlaid(
         live: List<AccessibilityCloudClient.Equipment>,
         seed: List<SeedCatalog.Record>,
+        stations: List<SeedCatalog.Station> = emptyList(),
     ): List<AccessibilityCloudClient.Equipment> {
+        val stationsById = firstWins(stations.map { it.stationId to it })
         val seedByInventory = firstWins(
             seed.mapNotNull { record ->
                 record.fastaEquipmentNumber?.let { it.toString() to record }
@@ -115,7 +120,19 @@ object EquipmentCatalog {
                 )
             )
         }
-        return appended
+        return appended.map { stationCoordinated(it, stationsById) }
+    }
+
+    // The station's own coordinate for a record that has none — after the
+    // live centroid and the seed's siblings, never instead of them. Pure,
+    // unit-tested.
+    fun stationCoordinated(
+        equipment: AccessibilityCloudClient.Equipment,
+        stationsById: Map<String, SeedCatalog.Station>,
+    ): AccessibilityCloudClient.Equipment {
+        if (equipment.latitude != null && equipment.longitude != null) return equipment
+        val station = stationsById[equipment.stationId] ?: return equipment
+        return equipment.copy(latitude = station.latitude, longitude = station.longitude)
     }
 
     // What a live record the inventory number answered incompletely (or not

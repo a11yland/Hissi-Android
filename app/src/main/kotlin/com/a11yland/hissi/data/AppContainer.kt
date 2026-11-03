@@ -73,16 +73,28 @@ class AppContainer(private val context: Context) {
     // The bundled seed and the catalog need disk I/O, hence memoized suspend
     // accessors instead of lazy properties.
     private var seedRecords: List<SeedCatalog.Record>? = null
+    private var seedStationList: List<SeedCatalog.Station>? = null
     private var catalogCache: CatalogCache? = null
     private val catalogMutex = Mutex()
 
     suspend fun seed(): List<SeedCatalog.Record> = catalogMutex.withLock { loadSeedLocked() }
+
+    // The seed's station coordinates — the overlay's last fallback.
+    suspend fun seedStations(): List<SeedCatalog.Station> = catalogMutex.withLock {
+        seedStationList?.let { return it }
+        withContext(Dispatchers.IO) {
+            readSeedAsset()?.let(SeedCatalog::parseStations).orEmpty()
+        }.also { seedStationList = it }
+    }
 
     suspend fun catalog(): CatalogCache = catalogMutex.withLock {
         catalogCache?.let { return it }
         CatalogCache(
             cacheFile = File(context.cacheDir, "equipment-catalog.json"),
             seed = loadSeedLocked(),
+            stations = withContext(Dispatchers.IO) {
+                readSeedAsset()?.let(SeedCatalog::parseStations).orEmpty()
+            }.also { seedStationList = it },
             scope = appScope,
             fetchTargeted = api::fetchEquipment,
             buildLive = api::fetchCatalog,
@@ -92,11 +104,13 @@ class AppContainer(private val context: Context) {
     private suspend fun loadSeedLocked(): List<SeedCatalog.Record> {
         seedRecords?.let { return it }
         val parsed = withContext(Dispatchers.IO) {
-            runCatching {
-                context.assets.open("seed-catalog.json").bufferedReader().use { it.readText() }
-            }.getOrNull()?.let(SeedCatalog::parse).orEmpty()
+            readSeedAsset()?.let(SeedCatalog::parse).orEmpty()
         }
         seedRecords = parsed
         return parsed
     }
+
+    private fun readSeedAsset(): String? = runCatching {
+        context.assets.open("seed-catalog.json").bufferedReader().use { it.readText() }
+    }.getOrNull()
 }
