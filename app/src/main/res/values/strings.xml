@@ -104,6 +104,9 @@
     <string name="alerts_denied">Benachrichtigungen sind deaktiviert – erlaube sie in den Einstellungen.</string>
     <string name="alerts_battery_hint">Damit Alarme zuverlässig ankommen, nimm Hissi von der Akku-Optimierung aus.</string>
     <string name="alerts_battery_open">Akku-Optimierung öffnen</string>
+    <string name="alerts_xiaomi_hint">Auf Xiaomi-Geräten: Erlaube in den App-Infos „Autostart“ und stelle „Akku-Sparmodus“ auf „Keine Einschränkungen“, sonst bleiben Alarme und Widget-Updates aus.</string>
+    <string name="alerts_xiaomi_open">App-Infos öffnen</string>
+    <string name="alerts_xiaomi_done">Erledigt</string>
     <string name="alert_broke_title">Aufzug außer Betrieb</string>
     <string name="alert_repaired_title">Aufzug wieder in Betrieb</string>
     <string name="alert_and_more">%1$s und %2$d weitere</string>

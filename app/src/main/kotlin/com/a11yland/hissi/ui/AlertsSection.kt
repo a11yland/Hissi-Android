@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.PowerManager
+import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -48,6 +49,14 @@ import com.a11yland.hissi.R
 // flipping anything again. Battery optimization is the main reliability risk
 // for a 30-minute cadence (OEM killers), so an enabled toggle points at the
 // exemption while it is not given.
+//
+// Xiaomi (MIUI/HyperOS, incl. Redmi and POCO) gets its own hint instead: its
+// battery saver and the Autostart switch sit on top of the AOSP exemption,
+// and without Autostart the system drops WorkManager jobs once the app is
+// swiped away or after a reboot — alerts and widget refreshes simply stop.
+// Neither switch is readable, so the hint shows until the user dismisses it,
+// and it opens App info, where HyperOS lists both (stable, unlike the
+// security-center component names that change between versions).
 @Composable
 fun AlertsSection(enabled: Boolean, onSetEnabled: (Boolean) -> Unit) {
     val context = LocalContext.current
@@ -56,6 +65,9 @@ fun AlertsSection(enabled: Boolean, onSetEnabled: (Boolean) -> Unit) {
     }
     var exemptFromBatteryOptimization by remember {
         mutableStateOf(isExemptFromBatteryOptimization(context))
+    }
+    var xiaomiHintDismissed by remember {
+        mutableStateOf(uiPrefs(context).getBoolean(XIAOMI_HINT_DISMISSED, false))
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -132,7 +144,26 @@ fun AlertsSection(enabled: Boolean, onSetEnabled: (Boolean) -> Unit) {
             }
         }
 
-        if (enabled && notificationsAllowed && !exemptFromBatteryOptimization) {
+        if (enabled && notificationsAllowed && isXiaomi() && !xiaomiHintDismissed) {
+            SettingsHint(
+                text = stringResource(R.string.alerts_xiaomi_hint),
+                action = stringResource(R.string.alerts_xiaomi_open),
+                dismiss = stringResource(R.string.alerts_xiaomi_done),
+                onDismiss = {
+                    uiPrefs(context).edit().putBoolean(XIAOMI_HINT_DISMISSED, true).apply()
+                    xiaomiHintDismissed = true
+                },
+            ) {
+                runCatching {
+                    context.startActivity(
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                            .setData(Uri.fromParts("package", context.packageName, null)),
+                    )
+                }
+            }
+        }
+
+        if (enabled && notificationsAllowed && !isXiaomi() && !exemptFromBatteryOptimization) {
             SettingsHint(
                 text = stringResource(R.string.alerts_battery_hint),
                 action = stringResource(R.string.alerts_battery_open),
@@ -148,21 +179,45 @@ fun AlertsSection(enabled: Boolean, onSetEnabled: (Boolean) -> Unit) {
 }
 
 @Composable
-private fun SettingsHint(text: String, action: String, onOpen: () -> Unit) {
+private fun SettingsHint(
+    text: String,
+    action: String,
+    dismiss: String? = null,
+    onDismiss: () -> Unit = {},
+    onOpen: () -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(
-            action,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.clickable { onOpen() },
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(
+                action,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clickable { onOpen() },
+            )
+            if (dismiss != null) {
+                Text(
+                    dismiss,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.clickable { onDismiss() },
+                )
+            }
+        }
     }
 }
+
+private const val XIAOMI_HINT_DISMISSED = "xiaomiHintDismissed"
+
+private fun uiPrefs(context: Context) =
+    context.getSharedPreferences("alerts-ui", Context.MODE_PRIVATE)
+
+// Redmi and POCO devices report Xiaomi as the manufacturer.
+private fun isXiaomi(): Boolean = Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true)
 
 private fun isExemptFromBatteryOptimization(context: Context): Boolean {
     val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
