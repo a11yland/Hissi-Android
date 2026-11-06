@@ -102,6 +102,9 @@
     <string name="alerts_denied">Notifications are off – allow them in Settings.</string>
     <string name="alerts_battery_hint">For alerts to arrive reliably, exempt Hissi from battery optimization.</string>
     <string name="alerts_battery_open">Open battery settings</string>
+    <string name="alerts_xiaomi_hint">On Xiaomi devices: in App info, allow “Autostart” and set “Battery saver” to “No restrictions”, or alerts and widget updates won’t arrive.</string>
+    <string name="alerts_xiaomi_open">Open App info</string>
+    <string name="alerts_xiaomi_done">Done</string>
     <string name="alert_broke_title">Elevator out of service</string>
     <string name="alert_repaired_title">Elevator back in service</string>
     <string name="alert_and_more">%1$s and %2$d more</string>
