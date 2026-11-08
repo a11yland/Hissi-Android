@@ -8,19 +8,20 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,7 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -77,10 +78,26 @@ fun AlertsSection(enabled: Boolean, onSetEnabled: (Boolean) -> Unit) {
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        val onToggle = { wanted: Boolean ->
+            if (wanted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                !notificationsAllowed
+            ) {
+                // onSetEnabled follows in the launcher callback — the
+                // dialog's answer refines the hint, not the intent.
+                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                onSetEnabled(wanted)
+            }
+        }
+        // The whole row is the switch: one element with the title and hint as
+        // its name ("Störungsalarme, …, Ein, Schalter") and one big target,
+        // instead of a bare switch next to a text TalkBack reads separately.
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .toggleable(value = enabled, role = Role.Switch, onValueChange = onToggle),
         ) {
             Icon(
                 Icons.Filled.NotificationsActive,
@@ -90,9 +107,7 @@ fun AlertsSection(enabled: Boolean, onSetEnabled: (Boolean) -> Unit) {
             )
             Column(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
-                modifier = Modifier
-                    .weight(1f)
-                    .semantics(mergeDescendants = true) {},
+                modifier = Modifier.weight(1f),
             ) {
                 Text(
                     stringResource(R.string.alerts_title),
@@ -104,20 +119,7 @@ fun AlertsSection(enabled: Boolean, onSetEnabled: (Boolean) -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Switch(
-                checked = enabled,
-                onCheckedChange = { wanted ->
-                    if (wanted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                        !notificationsAllowed
-                    ) {
-                        // onSetEnabled follows in the launcher callback — the
-                        // dialog's answer refines the hint, not the intent.
-                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    } else {
-                        onSetEnabled(wanted)
-                    }
-                },
-            )
+            Switch(checked = enabled, onCheckedChange = null)
         }
 
         if (enabled && !notificationsAllowed) {
@@ -147,6 +149,8 @@ fun AlertsSection(enabled: Boolean, onSetEnabled: (Boolean) -> Unit) {
     }
 }
 
+// The action is a text button: Button role and a 48 dp target, where bare
+// clickable text was about 20 dp tall and roleless.
 @Composable
 private fun SettingsHint(text: String, action: String, onOpen: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -155,12 +159,9 @@ private fun SettingsHint(text: String, action: String, onOpen: () -> Unit) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(
-            action,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.clickable { onOpen() },
-        )
+        TextButton(onClick = onOpen) {
+            Text(action, style = MaterialTheme.typography.labelLarge)
+        }
     }
 }
 

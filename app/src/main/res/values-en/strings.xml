@@ -132,4 +132,5 @@
     <string name="whats_new_title">What\'s New</string>
     <string name="onboarding_get_started">Get started</string>
     <string name="onboarding_continue">Continue</string>
+    <string name="link_open_browser">open in browser</string>
 </resources>

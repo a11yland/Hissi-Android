@@ -24,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -204,11 +205,9 @@ fun NearbySection(search: SearchViewModel, onSelect: (String) -> Unit) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Text(
-                    stringResource(R.string.nearby_open_settings),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.clickable {
+                // A text button: Button role and a 48 dp target.
+                TextButton(
+                    onClick = {
                         context.startActivity(
                             Intent(
                                 Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
@@ -216,7 +215,12 @@ fun NearbySection(search: SearchViewModel, onSelect: (String) -> Unit) {
                             ),
                         )
                     },
-                )
+                ) {
+                    Text(
+                        stringResource(R.string.nearby_open_settings),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
             }
 
             NearbyState.Located -> Column {

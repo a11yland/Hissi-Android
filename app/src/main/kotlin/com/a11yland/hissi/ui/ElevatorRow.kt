@@ -101,17 +101,16 @@ fun ElevatorRow(
     }
 }
 
-// Per-elevator favorite toggle, mirroring the iOS star.
+// Per-elevator favorite toggle, mirroring the iOS star. The label sits on the
+// icon, which the button merges: clearing the button's semantics instead
+// would drop its click action and Button role with them.
 @Composable
 fun FavoriteStar(isFavorite: Boolean, onToggle: () -> Unit) {
     val label = stringResource(if (isFavorite) R.string.fav_remove else R.string.fav_add)
-    IconButton(
-        onClick = onToggle,
-        modifier = Modifier.clearAndSetSemantics { contentDescription = label },
-    ) {
+    IconButton(onClick = onToggle) {
         Icon(
             imageVector = if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
-            contentDescription = null,
+            contentDescription = label,
             // Lilac, never yellow — yellow means "unbekannt" in this palette.
             tint = if (isFavorite) MaterialTheme.colorScheme.primary
             else MaterialTheme.colorScheme.onSurfaceVariant,

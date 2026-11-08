@@ -70,7 +70,9 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -248,7 +250,13 @@ fun ContentScreen(
         topBar = {
             CenterAlignedTopAppBar(
                 navigationIcon = {
-                    IconButton(onClick = { showsAbout = true }) {
+                    // The logo is decorative (AppIcon), so the button carries
+                    // the name — "Über Hissi", for TalkBack and Voice Access.
+                    val aboutLabel = stringResource(R.string.about_open)
+                    IconButton(
+                        onClick = { showsAbout = true },
+                        modifier = Modifier.semantics { contentDescription = aboutLabel },
+                    ) {
                         AppIcon(size = 28.dp, cornerRadius = 6.dp)
                     }
                 },
@@ -335,7 +343,10 @@ fun ContentScreen(
                         .focusRequester(searchFocus),
                     interactionSource = searchInteraction,
                     singleLine = true,
-                    placeholder = { Text(stringResource(R.string.search_prompt)) },
+                    // A label, not a placeholder: it stays visible (floating
+                    // into the border) once text is entered, and it is the
+                    // field's accessible name.
+                    label = { Text(stringResource(R.string.search_prompt)) },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     trailingIcon = {
                         if (query.isNotEmpty()) {
@@ -609,7 +620,10 @@ private fun SortMenu(monitor: MonitorViewModel) {
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             FavoritesOrder.entries.forEach { candidate ->
+                // The check is decorative; "selected" says which order is
+                // active to TalkBack.
                 DropdownMenuItem(
+                    modifier = Modifier.semantics { selected = candidate == order },
                     text = { Text(stringResource(candidate.labelRes)) },
                     leadingIcon = {
                         if (candidate == order) {
