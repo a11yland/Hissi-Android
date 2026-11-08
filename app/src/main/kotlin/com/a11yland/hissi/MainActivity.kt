@@ -77,7 +77,8 @@ class MainActivity : ComponentActivity() {
 // background and surface, the rows' surface as the container tones, the
 // palette's separator and secondary text, and the button lilac as primary —
 // AAA as text on every ground (PaletteTest). The dark tint is pale, so filled
-// buttons carry the palette's own label colour instead of white.
+// buttons carry the palette's own label colour instead of white. The error
+// colour is the palette's too, so PaletteTest covers it.
 private fun hex(value: String) = Color(WcagContrast.argb(value))
 
 private val hissiLightColorScheme = lightColorScheme(
@@ -102,6 +103,8 @@ private val hissiLightColorScheme = lightColorScheme(
     surfaceContainerHighest = hex(Palette.SURFACE_HIGH_LIGHT),
     outline = hex(Palette.TEXT_SECONDARY_LIGHT),
     outlineVariant = hex(Palette.SEPARATOR_LIGHT),
+    error = hex(Palette.ERROR_LIGHT),
+    onError = hex(Palette.ON_ERROR_LIGHT),
 )
 
 private val hissiDarkColorScheme = darkColorScheme(
@@ -126,4 +129,6 @@ private val hissiDarkColorScheme = darkColorScheme(
     surfaceContainerHighest = hex(Palette.SURFACE_HIGH_DARK),
     outline = hex(Palette.TEXT_SECONDARY_DARK),
     outlineVariant = hex(Palette.SEPARATOR_DARK),
+    error = hex(Palette.ERROR_DARK),
+    onError = hex(Palette.ON_ERROR_DARK),
 )

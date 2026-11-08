@@ -3,7 +3,6 @@ package com.a11yland.hissi.widget
 import android.content.Context
 import android.os.Build
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,8 +46,6 @@ import com.a11yland.hissi.core.ElevatorRanking
 import com.a11yland.hissi.core.ElevatorStatus
 import com.a11yland.hissi.core.ElevatorSummary
 import com.a11yland.hissi.core.MonitoredElevator
-import com.a11yland.hissi.core.Palette
-import com.a11yland.hissi.core.WcagContrast
 import com.a11yland.hissi.core.StatusIcon
 import com.a11yland.hissi.data.FavoritesRefresher
 
@@ -97,13 +94,6 @@ class HissiWidget : GlanceAppWidget() {
             .getOrDefault(stored)
     }
 }
-
-// Light/dark pairs from the shared status palette (StatusUi) — the widget
-// renders in the system theme, not the app's session-only override.
-private val statusGreen =
-    androidx.glance.color.ColorProvider(day = palette(Palette.STATUS_OK_TEXT_LIGHT), night = palette(Palette.STATUS_OK_TEXT_DARK))
-private val statusRed =
-    androidx.glance.color.ColorProvider(day = palette(Palette.STATUS_DOWN_TEXT_LIGHT), night = palette(Palette.STATUS_DOWN_TEXT_DARK))
 
 @Composable
 private fun WidgetContent(elevators: List<MonitoredElevator>) {
@@ -159,12 +149,12 @@ private fun NoFavorites(modifier: GlanceModifier) {
             provider = ImageProvider(R.drawable.ic_widget_star),
             contentDescription = null,
             modifier = GlanceModifier.size(24.dp),
-            colorFilter = ColorFilter.tint(GlanceTheme.colors.onSurfaceVariant),
+            colorFilter = ColorFilter.tint(widgetSecondaryText),
         )
         Spacer(GlanceModifier.height(6.dp))
         Text(
             label,
-            style = TextStyle(fontSize = 12.sp, color = GlanceTheme.colors.onSurfaceVariant),
+            style = TextStyle(fontSize = 12.sp, color = widgetSecondaryText),
         )
     }
 }
@@ -240,7 +230,7 @@ private fun Verdict(summary: ElevatorSummary, modifier: GlanceModifier) {
         )
         Text(
             caption,
-            style = TextStyle(fontSize = 11.sp, color = GlanceTheme.colors.onSurfaceVariant),
+            style = TextStyle(fontSize = 11.sp, color = widgetSecondaryText),
         )
     }
 }
@@ -294,7 +284,7 @@ private fun ElevatorList(
         if (affected.size > maxRows) {
             Text(
                 context.getString(R.string.widget_more, affected.size - maxRows),
-                style = TextStyle(fontSize = 11.sp, color = GlanceTheme.colors.onSurfaceVariant),
+                style = TextStyle(fontSize = 11.sp, color = widgetSecondaryText),
             )
         }
     }
@@ -329,15 +319,15 @@ private fun ElevatorRow(elevator: MonitoredElevator) {
                 style = TextStyle(
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = GlanceTheme.colors.onSurface,
+                    color = widgetText,
                 ),
-                maxLines = 1,
+                maxLines = 2,
             )
             if (elevator.elevatorDescription.isNotEmpty()) {
                 Text(
                     elevator.elevatorDescription,
-                    style = TextStyle(fontSize = 11.sp, color = GlanceTheme.colors.onSurfaceVariant),
-                    maxLines = 1,
+                    style = TextStyle(fontSize = 11.sp, color = widgetSecondaryText),
+                    maxLines = 2,
                 )
             }
         }
@@ -379,7 +369,7 @@ private fun summaryColor(summary: ElevatorSummary): ColorProvider = when (summar
     ElevatorSummary.Verdict.AllWorking -> statusGreen
     ElevatorSummary.Verdict.Broken -> statusRed
     ElevatorSummary.Verdict.Unknown, ElevatorSummary.Verdict.AwaitingSync -> statusAmber
-    else -> GlanceTheme.colors.onSurfaceVariant
+    else -> widgetSecondaryText
 }
 
 @Composable
@@ -395,11 +385,3 @@ private fun StatusIcon.drawable(): Int = when (this) {
     StatusIcon.QuestionmarkCircle -> R.drawable.ic_widget_help
     StatusIcon.Star -> R.drawable.ic_widget_star
 }
-
-// The palette's screen ground as the tile's ground (cream / deep purple),
-// following the system theme like the status colours.
-private fun palette(hex: String) = Color(WcagContrast.argb(hex))
-private val widgetGround =
-    androidx.glance.color.ColorProvider(day = palette(Palette.BACKGROUND_LIGHT), night = palette(Palette.BACKGROUND_DARK))
-private val statusAmber =
-    androidx.glance.color.ColorProvider(day = palette(Palette.STATUS_UNKNOWN_TEXT_LIGHT), night = palette(Palette.STATUS_UNKNOWN_TEXT_DARK))

@@ -5,7 +5,6 @@ import android.content.Intent
 import android.location.LocationManager
 import android.os.Build
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,8 +44,6 @@ import androidx.glance.unit.ColorProvider
 import com.a11yland.hissi.HissiApplication
 import com.a11yland.hissi.MainActivity
 import com.a11yland.hissi.R
-import com.a11yland.hissi.core.Palette
-import com.a11yland.hissi.core.WcagContrast
 import com.a11yland.hissi.core.ElevatorStatus
 import com.a11yland.hissi.core.EquipmentCatalog
 import com.a11yland.hissi.core.NearbyStations
@@ -135,13 +132,6 @@ private sealed interface NearbyWidgetState {
     data class Located(val stations: List<NearbyStations.Station>) : NearbyWidgetState
 }
 
-// Light/dark pairs from the shared status palette (StatusUi) — the widget
-// renders in the system theme, not the app's session-only override.
-private val statusGreen =
-    androidx.glance.color.ColorProvider(day = palette(Palette.STATUS_OK_TEXT_LIGHT), night = palette(Palette.STATUS_OK_TEXT_DARK))
-private val statusRed =
-    androidx.glance.color.ColorProvider(day = palette(Palette.STATUS_DOWN_TEXT_LIGHT), night = palette(Palette.STATUS_DOWN_TEXT_DARK))
-
 @Composable
 private fun NearbyContent(state: NearbyWidgetState) {
     val context = LocalContext.current
@@ -201,12 +191,12 @@ private fun Notice(text: String, modifier: GlanceModifier) {
             provider = ImageProvider(R.drawable.ic_widget_location),
             contentDescription = null,
             modifier = GlanceModifier.size(22.dp),
-            colorFilter = ColorFilter.tint(GlanceTheme.colors.onSurfaceVariant),
+            colorFilter = ColorFilter.tint(widgetSecondaryText),
         )
         Spacer(GlanceModifier.height(6.dp))
         Text(
             text,
-            style = TextStyle(fontSize = 12.sp, color = GlanceTheme.colors.onSurfaceVariant),
+            style = TextStyle(fontSize = 12.sp, color = widgetSecondaryText),
             maxLines = 3,
         )
     }
@@ -228,7 +218,7 @@ private fun Nearest(station: NearbyStations.Station, modifier: GlanceModifier) {
             style = TextStyle(
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
-                color = GlanceTheme.colors.onSurface,
+                color = widgetText,
             ),
             maxLines = 2,
         )
@@ -248,7 +238,7 @@ private fun Nearest(station: NearbyStations.Station, modifier: GlanceModifier) {
         }
         Text(
             distanceLabel(station.distanceMeters),
-            style = TextStyle(fontSize = 11.sp, color = GlanceTheme.colors.onSurfaceVariant),
+            style = TextStyle(fontSize = 11.sp, color = widgetSecondaryText),
         )
     }
 }
@@ -275,7 +265,7 @@ private fun Header() {
             provider = ImageProvider(R.drawable.ic_widget_location),
             contentDescription = null,
             modifier = GlanceModifier.size(14.dp),
-            colorFilter = ColorFilter.tint(GlanceTheme.colors.primary),
+            colorFilter = ColorFilter.tint(widgetTint),
         )
         Spacer(GlanceModifier.width(6.dp))
         Text(
@@ -283,9 +273,9 @@ private fun Header() {
             style = TextStyle(
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
-                color = GlanceTheme.colors.onSurfaceVariant,
+                color = widgetSecondaryText,
             ),
-            maxLines = 1,
+            maxLines = 2,
         )
     }
 }
@@ -317,9 +307,9 @@ private fun StationRow(station: NearbyStations.Station) {
                 style = TextStyle(
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = GlanceTheme.colors.onSurface,
+                    color = widgetText,
                 ),
-                maxLines = 1,
+                maxLines = 2,
             )
             Text(
                 stationStatusText(context, station),
@@ -330,7 +320,7 @@ private fun StationRow(station: NearbyStations.Station) {
         Spacer(GlanceModifier.width(8.dp))
         Text(
             distanceLabel(station.distanceMeters),
-            style = TextStyle(fontSize = 11.sp, color = GlanceTheme.colors.onSurfaceVariant),
+            style = TextStyle(fontSize = 11.sp, color = widgetSecondaryText),
         )
     }
 }
@@ -377,11 +367,3 @@ private fun StatusIcon.drawable(): Int = when (this) {
     StatusIcon.QuestionmarkCircle -> R.drawable.ic_widget_help
     StatusIcon.Star -> R.drawable.ic_widget_star
 }
-
-// The palette's screen ground as the tile's ground (cream / deep purple) and
-// the status text pairs, following the system theme like the status widget.
-private fun palette(hex: String) = Color(WcagContrast.argb(hex))
-private val widgetGround =
-    androidx.glance.color.ColorProvider(day = palette(Palette.BACKGROUND_LIGHT), night = palette(Palette.BACKGROUND_DARK))
-private val statusAmber =
-    androidx.glance.color.ColorProvider(day = palette(Palette.STATUS_UNKNOWN_TEXT_LIGHT), night = palette(Palette.STATUS_UNKNOWN_TEXT_DARK))

@@ -32,25 +32,36 @@ object Palette {
     const val SURFACE_HIGH_DARK = "#2E2539"
     const val SEPARATOR_LIGHT = "#E3D6C0"
     const val SEPARATOR_DARK = "#3A3046"
-    const val TEXT_SECONDARY_LIGHT = "#5A4E66"
-    const val TEXT_SECONDARY_DARK = "#B9AEC2"
+    // Secondary text, AAA on every ground — the design's #5A4E66 / #B9AEC2
+    // were 6.4:1 / 6.9:1 on the high surface.
+    const val TEXT_SECONDARY_LIGHT = "#53485E"
+    const val TEXT_SECONDARY_DARK = "#BCB1C4"
 
     // Status colours follow the mark: ping green / amber / red. Each comes as
-    // a symbol colour (the icon) and a darker text variant that stays AA on
-    // every ground; the symbol alone never carries the status — its shape
-    // does (ElevatorStatus.icon).
+    // a symbol colour (the icon) and a text variant that reaches AAA (7:1) on
+    // every ground — darker on light, lighter on dark, same hue as the mark;
+    // the symbol alone never carries the status — its shape does
+    // (ElevatorStatus.icon).
     const val STATUS_OK_SYMBOL_LIGHT = "#00806E"
     const val STATUS_OK_SYMBOL_DARK = "#3FE0C5"
-    const val STATUS_OK_TEXT_LIGHT = "#006B5C"
+    const val STATUS_OK_TEXT_LIGHT = "#00564A"
     const val STATUS_OK_TEXT_DARK = "#3FE0C5"
     const val STATUS_UNKNOWN_SYMBOL_LIGHT = "#C46A00"
     const val STATUS_UNKNOWN_SYMBOL_DARK = "#FBBF24"
-    const val STATUS_UNKNOWN_TEXT_LIGHT = "#8A4B08"
+    const val STATUS_UNKNOWN_TEXT_LIGHT = "#743F07"
     const val STATUS_UNKNOWN_TEXT_DARK = "#FBBF24"
     const val STATUS_DOWN_SYMBOL_LIGHT = "#E11D48"
     const val STATUS_DOWN_SYMBOL_DARK = "#FB7185"
-    const val STATUS_DOWN_TEXT_LIGHT = "#B4123A"
-    const val STATUS_DOWN_TEXT_DARK = "#FB7185"
+    const val STATUS_DOWN_TEXT_LIGHT = "#980F31"
+    const val STATUS_DOWN_TEXT_DARK = "#FC98A6"
+
+    // Error text (a failed refresh or search) — the "broken" text red rather
+    // than Material's default #B3261E, which is 5.4:1 on the high surface. Its
+    // label colours are the button pair's, for a filled error container.
+    const val ERROR_LIGHT = STATUS_DOWN_TEXT_LIGHT
+    const val ERROR_DARK = STATUS_DOWN_TEXT_DARK
+    const val ON_ERROR_LIGHT = ON_TINT_LIGHT
+    const val ON_ERROR_DARK = ON_TINT_DARK
 
     // The mark's own colours (frame, chevrons/dot) — lilac and green on light,
     // cream and mint on dark.
@@ -79,12 +90,13 @@ object Palette {
     val darkSymbolColors: List<String> =
         listOf(STATUS_OK_SYMBOL_DARK, STATUS_UNKNOWN_SYMBOL_DARK, STATUS_DOWN_SYMBOL_DARK)
 
-    // The text colours that must read on every ground: the status words and
-    // the secondary text (AA, 4.5:1 — WCAG 2.2 SC 1.4.3).
+    // The text colours that must read on every ground: the status words, the
+    // secondary text and the error text (AAA, 7:1 — WCAG 2.2 SC 1.4.6). The
+    // primary text is the opposite screen ground (BACKGROUND_DARK on light).
     val lightTextColors: List<String> =
-        listOf(STATUS_OK_TEXT_LIGHT, STATUS_UNKNOWN_TEXT_LIGHT, STATUS_DOWN_TEXT_LIGHT, TEXT_SECONDARY_LIGHT)
+        listOf(STATUS_OK_TEXT_LIGHT, STATUS_UNKNOWN_TEXT_LIGHT, STATUS_DOWN_TEXT_LIGHT, TEXT_SECONDARY_LIGHT, ERROR_LIGHT, BACKGROUND_DARK)
     val darkTextColors: List<String> =
-        listOf(STATUS_OK_TEXT_DARK, STATUS_UNKNOWN_TEXT_DARK, STATUS_DOWN_TEXT_DARK, TEXT_SECONDARY_DARK)
+        listOf(STATUS_OK_TEXT_DARK, STATUS_UNKNOWN_TEXT_DARK, STATUS_DOWN_TEXT_DARK, TEXT_SECONDARY_DARK, ERROR_DARK, BACKGROUND_LIGHT)
 
     // The tint at low opacity over the screen ground — the tonal button and
     // "primaryContainer" fill the tint's own text sits on.

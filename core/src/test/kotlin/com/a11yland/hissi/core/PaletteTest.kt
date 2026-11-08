@@ -5,9 +5,9 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-// Ported from HissiTests/Tests/PaletteTests.swift: the tint stays at WCAG
-// AAA and the status words at AA as text wherever they are drawn, and the
-// badge letters at AAA on their badge.
+// Ported from HissiTests/Tests/PaletteTests.swift: the tint, the status
+// words, the secondary and the error text stay at WCAG AAA wherever they are
+// drawn, and the badge letters at AAA on their badge.
 class PaletteTest {
     @Test
     fun tintIsEnhancedContrastTextOnEveryGround() {
@@ -46,14 +46,15 @@ class PaletteTest {
         )
     }
 
-    // The status words are the design's darker text variants — AA on every
-    // ground, so the colour can reinforce the shape without undercutting it.
+    // The status words are the palette's text variants — AAA on every ground
+    // (AA was the floor until #17), so the colour can reinforce the shape
+    // without undercutting it. Secondary, error and primary text ride along.
     @Test
-    fun statusTextReadsOnEveryGround() {
+    fun textReadsAtEnhancedContrastOnEveryGround() {
         for (color in Palette.lightTextColors) {
             for (ground in Palette.lightGrounds) {
                 assertTrue(
-                    WcagContrast.ratio(color, ground) >= Palette.MINIMUM_TEXT_CONTRAST,
+                    WcagContrast.ratio(color, ground) >= Palette.ENHANCED_TEXT_CONTRAST,
                     "$color light on $ground",
                 )
             }
@@ -61,11 +62,18 @@ class PaletteTest {
         for (color in Palette.darkTextColors) {
             for (ground in Palette.darkGrounds) {
                 assertTrue(
-                    WcagContrast.ratio(color, ground) >= Palette.MINIMUM_TEXT_CONTRAST,
+                    WcagContrast.ratio(color, ground) >= Palette.ENHANCED_TEXT_CONTRAST,
                     "$color dark on $ground",
                 )
             }
         }
+    }
+
+    // A filled error container carries the button label colours.
+    @Test
+    fun errorLabelsReadOnTheErrorColour() {
+        assertTrue(WcagContrast.ratio(Palette.ON_ERROR_LIGHT, Palette.ERROR_LIGHT) >= Palette.ENHANCED_TEXT_CONTRAST)
+        assertTrue(WcagContrast.ratio(Palette.ON_ERROR_DARK, Palette.ERROR_DARK) >= Palette.ENHANCED_TEXT_CONTRAST)
     }
 
     @Test
