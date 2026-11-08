@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
@@ -55,12 +56,16 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -78,7 +83,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.view.accessibility.AccessibilityManager
 import com.a11yland.hissi.R
+import com.a11yland.hissi.alerts.alertBody
+import com.a11yland.hissi.alerts.alertTitle
 import com.a11yland.hissi.core.FavoritesOrder
 import com.a11yland.hissi.core.MonitoredElevator
 import com.a11yland.hissi.core.RefreshInterval
@@ -152,6 +160,18 @@ fun ContentScreen(
     var selected by rememberSaveable(stateSaver = monitoredElevatorSaver) {
         mutableStateOf<MonitoredElevator?>(null)
     }
+    // The favorites list leaves the composition while the detail is up, so
+    // its scroll state lives here — back from the detail the list is where it
+    // was, not at the top. The favorite that was opened gets the focus back
+    // (FavoritesContent), like the iOS stack pop puts VoiceOver back on the
+    // row.
+    val favoritesListState = rememberLazyListState()
+    var openedFavoriteId by rememberSaveable { mutableStateOf<String?>(null) }
+    var focusReturnPending by rememberSaveable { mutableStateOf(false) }
+    val closeDetail = {
+        selected = null
+        focusReturnPending = openedFavoriteId != null
+    }
 
     val mode = when {
         query.isNotBlank() -> Mode.Results
@@ -212,12 +232,12 @@ fun ContentScreen(
         val live = favorites.firstOrNull { it.id == pushed.id || it.id == refreshed?.id }
             ?: refreshed
             ?: pushed
-        BackHandler { selected = null }
+        BackHandler(onBack = closeDetail)
         ElevatorDetailScreen(
             elevator = live,
             isFavorite = favorites.any { it.id == live.id },
             onToggleFavorite = { monitor.toggleFavorite(live) },
-            onBack = { selected = null },
+            onBack = closeDetail,
         )
         return
     }
@@ -382,7 +402,13 @@ fun ContentScreen(
             when (mode) {
                 Mode.Favorites -> FavoritesContent(
                     monitor = monitor,
-                    onOpen = { selected = it },
+                    listState = favoritesListState,
+                    focusReturnId = openedFavoriteId.takeIf { focusReturnPending },
+                    onFocusReturned = { focusReturnPending = false },
+                    onOpen = {
+                        openedFavoriteId = it.id
+                        selected = it
+                    },
                 )
                 Mode.Recents -> RecentsContent(
                     search = search,
@@ -395,7 +421,10 @@ fun ContentScreen(
                     search = search,
                     monitor = monitor,
                     query = query,
-                    onOpen = { selected = it },
+                    onOpen = {
+                        openedFavoriteId = null
+                        selected = it
+                    },
                 )
             }
         }
@@ -473,6 +502,11 @@ private val monitoredElevatorSaver = Saver<MonitoredElevator?, String>(
 @Composable
 private fun FavoritesContent(
     monitor: MonitorViewModel,
+    listState: LazyListState,
+    // The favorite to put the focus back on, set once on the way back from
+    // its detail screen.
+    focusReturnId: String?,
+    onFocusReturned: () -> Unit,
     onOpen: (MonitoredElevator) -> Unit,
 ) {
     val favorites by monitor.favorites.collectAsState()
@@ -511,7 +545,6 @@ private fun FavoritesContent(
     // Long-press and drag reorders right here — no edit mode, no setting to
     // pick first. The drag itself is what moves the list into "Eigene
     // Reihenfolge" (committed on drop, MonitorViewModel).
-    val listState = rememberLazyListState()
     val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
         monitor.move(from.index, to.index)
     }
@@ -522,17 +555,65 @@ private fun FavoritesContent(
     // deprecated since API 36): the node below sits outside the LazyColumn so
     // it is always composed, and TalkBack reads every change of its text.
     val context = LocalContext.current
-    var moveAnnouncement by remember { mutableStateOf("") }
+    var announcement by remember { mutableStateOf("") }
+    // Cleared for a frame first: a live region only speaks when its text
+    // changes, and "Aktualisiert, keine Änderung" twice in a row is two
+    // answers.
+    val announce = { text: String ->
+        scope.launch {
+            announcement = ""
+            withFrameNanos { }
+            announcement = text
+        }
+    }
     val announceMove = { elevator: MonitoredElevator, position: Int, count: Int ->
-        moveAnnouncement =
-            context.getString(R.string.moved_announcement, elevator.stationName, position, count)
+        announce(context.getString(R.string.moved_announcement, elevator.stationName, position, count))
+    }
+
+    // A refresh's outcome (MonitorViewModel.refreshAnnouncement): the change
+    // in the notification's words, or "no change" after a manual refresh.
+    val refreshAnnouncement by monitor.refreshAnnouncement.collectAsState()
+    LaunchedEffect(refreshAnnouncement) {
+        val outcome = refreshAnnouncement ?: return@LaunchedEffect
+        monitor.consumeRefreshAnnouncement()
+        announce(
+            outcome.alert?.let { "${alertTitle(context, it)}: ${alertBody(context, it)}" }
+                ?: context.getString(R.string.refresh_no_change),
+        )
+    }
+
+    // Back from a favorite's detail: scroll it into view if needed and hand
+    // it the focus. Only for TalkBack and keyboard users — a touch user would
+    // just see a focus highlight on the row. Keyed on Unit: the list enters
+    // the composition anew on the way back, and consuming the request must
+    // not cancel this effect.
+    // Held for as long as the list is composed: the request is consumed
+    // right away, but the row has to stay the focus target until it has the
+    // focus.
+    val returnId = remember { focusReturnId }
+    val returnFocus = remember { FocusRequester() }
+    val screenReaderOn = remember(context) {
+        context.getSystemService(AccessibilityManager::class.java)?.isTouchExplorationEnabled == true
+    }
+    val inputModeManager = LocalInputModeManager.current
+    LaunchedEffect(Unit) {
+        val id = returnId ?: return@LaunchedEffect
+        onFocusReturned()
+        val index = favorites.indexOfFirst { it.id == id }
+        if (index < 0) return@LaunchedEffect
+        if (listState.layoutInfo.visibleItemsInfo.none { it.index == index }) {
+            listState.scrollToItem(index)
+        }
+        if (!screenReaderOn && inputModeManager.inputMode != InputMode.Keyboard) return@LaunchedEffect
+        withFrameNanos { }
+        runCatching { returnFocus.requestFocus() }
     }
     val moveUpLabel = stringResource(R.string.move_up)
     val moveDownLabel = stringResource(R.string.move_down)
 
     PullToRefreshBox(
         isRefreshing = isRefreshing,
-        onRefresh = { scope.launch { monitor.refresh() } },
+        onRefresh = { scope.launch { monitor.refresh(manual = true) } },
         modifier = Modifier.fillMaxSize(),
     ) {
         Box(
@@ -540,7 +621,7 @@ private fun FavoritesContent(
                 .size(1.dp)
                 .semantics {
                     liveRegion = LiveRegionMode.Polite
-                    contentDescription = moveAnnouncement
+                    contentDescription = announcement
                 },
         )
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
@@ -553,6 +634,20 @@ private fun FavoritesContent(
                                 .longPressDraggableHandle(
                                     enabled = favorites.size > 1,
                                     onDragStopped = { monitor.commitManualOrder() },
+                                )
+                                // The focus target for the way back from the
+                                // detail. A clickable is not focusable in
+                                // touch mode, which TalkBack runs in — so
+                                // that one row may be, while a screen reader
+                                // is on.
+                                .then(
+                                    if (elevator.id == returnId) {
+                                        Modifier
+                                            .focusRequester(returnFocus)
+                                            .focusProperties { if (screenReaderOn) canFocus = true }
+                                    } else {
+                                        Modifier
+                                    },
                                 )
                                 .clickable { onOpen(elevator) }
                                 // Move-by-one, offered to assistive

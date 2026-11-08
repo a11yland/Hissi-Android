@@ -135,4 +135,5 @@
     <string name="onboarding_get_started">Los geht\'s</string>
     <string name="onboarding_continue">Weiter</string>
     <string name="link_open_browser">im Browser öffnen</string>
+    <string name="refresh_no_change">Aktualisiert, keine Änderung</string>
 </resources>

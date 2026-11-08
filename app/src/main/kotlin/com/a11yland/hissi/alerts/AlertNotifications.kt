@@ -26,22 +26,8 @@ object AlertNotifications {
         if (!manager.areNotificationsEnabled()) return
         ensureChannel(context)
 
-        val title: String
-        val body: String
-        when (alert) {
-            is DisruptionAlert.Broke -> {
-                title = context.getString(R.string.alert_broke_title)
-                body = if (alert.count > 1) {
-                    context.getString(R.string.alert_and_more, alert.station, alert.count - 1)
-                } else {
-                    alert.station
-                }
-            }
-            is DisruptionAlert.Repaired -> {
-                title = context.getString(R.string.alert_repaired_title)
-                body = alert.station
-            }
-        }
+        val title = alertTitle(context, alert)
+        val body = alertBody(context, alert)
 
         val tapIntent = PendingIntent.getActivity(
             context,
@@ -74,4 +60,21 @@ object AlertNotifications {
             ),
         )
     }
+}
+
+// DisruptionAlert's title and body over string resources (the :core literals
+// are the German test vocabulary). Shared with the in-app announcement after a
+// refresh, so the app says what the notification would.
+internal fun alertTitle(context: Context, alert: DisruptionAlert): String = when (alert) {
+    is DisruptionAlert.Broke -> context.getString(R.string.alert_broke_title)
+    is DisruptionAlert.Repaired -> context.getString(R.string.alert_repaired_title)
+}
+
+internal fun alertBody(context: Context, alert: DisruptionAlert): String = when (alert) {
+    is DisruptionAlert.Broke -> if (alert.count > 1) {
+        context.getString(R.string.alert_and_more, alert.station, alert.count - 1)
+    } else {
+        alert.station
+    }
+    is DisruptionAlert.Repaired -> alert.station
 }

@@ -133,4 +133,5 @@
     <string name="onboarding_get_started">Get started</string>
     <string name="onboarding_continue">Continue</string>
     <string name="link_open_browser">open in browser</string>
+    <string name="refresh_no_change">Refreshed, no change</string>
 </resources>

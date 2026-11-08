@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.a11yland.hissi.HissiApplication
 import com.a11yland.hissi.R
+import com.a11yland.hissi.core.DisruptionAlert
 import com.a11yland.hissi.core.FavoritesOrder
 import com.a11yland.hissi.core.FavoritesOrdering
 import com.a11yland.hissi.core.MonitoredElevator
@@ -33,6 +34,23 @@ class MonitorViewModel(private val container: AppContainer) : ViewModel() {
     val errorRes: StateFlow<Int?> = _errorRes.asStateFlow()
 
     private val refreshMutex = Mutex()
+
+    // What a finished refresh has to say to TalkBack users, or null when it
+    // stays silent: a manual refresh always answers (the tap needs feedback),
+    // a routine poll only when a status really changed — the alert
+    // transition rules (DisruptionAlert), so the app speaks exactly when a
+    // notification would. A new instance per refresh, so the same sentence
+    // twice in a row is still spoken twice.
+    class RefreshAnnouncement(val alert: DisruptionAlert?)
+
+    private val _refreshAnnouncement = MutableStateFlow<RefreshAnnouncement?>(null)
+    val refreshAnnouncement: StateFlow<RefreshAnnouncement?> = _refreshAnnouncement.asStateFlow()
+
+    // Taken once: the favorites list is not always on screen, and coming
+    // back to it must not repeat an old sentence.
+    fun consumeRefreshAnnouncement() {
+        _refreshAnnouncement.value = null
+    }
 
     // How the list is sorted. The stored list is always the displayed order,
     // so this only steers writes.
@@ -109,15 +127,25 @@ class MonitorViewModel(private val container: AppContainer) : ViewModel() {
     // under its live identity and the id migration is persisted. Failures
     // keep previous values and surface one error line. The widget re-renders
     // afterwards either way — its data is the store this refresh just wrote.
-    suspend fun refresh() {
+    //
+    // `manual`: the user asked (button, pull) — see refreshAnnouncement.
+    suspend fun refresh(manual: Boolean = false) {
         refreshMutex.withLock {
             _isLoading.value = true
             _errorRes.value = null
             try {
+                val previous = _favorites.value
                 val result = FavoritesRefresher.refreshAll(container)
                 _favorites.value = result.elevators
-                if (result.failedStations.isNotEmpty()) {
+                val failed = result.failedStations.isNotEmpty()
+                if (failed) {
                     _errorRes.value = R.string.refresh_failed
+                }
+                val alert = DisruptionAlert.transition(previous, result.elevators)
+                // A failure speaks through its own live region (RefreshError);
+                // "no change" on top of it would contradict it.
+                if (alert != null || (manual && !failed)) {
+                    _refreshAnnouncement.value = RefreshAnnouncement(alert)
                 }
                 container.reloadWidgets()
             } finally {
