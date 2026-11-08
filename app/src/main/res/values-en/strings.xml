@@ -139,4 +139,12 @@
         <item quantity="one">%1$d station found nearby</item>
         <item quantity="other">%1$d stations found nearby</item>
     </plurals>
+    <string name="whats_new_1_3_nearby_title">More stations nearby</string>
+    <string name="whats_new_1_3_nearby_detail">Stations whose elevators are reported without a location now show up nearby too – U Klosterstraße, for example.</string>
+    <string name="whats_new_1_3_widgets_title">Widgets show only disruptions</string>
+    <string name="whats_new_1_3_widgets_detail">Widgets list only elevators that are out of service. When everything works, they show the Hissi mark.</string>
+    <string name="whats_new_1_3_interface_title">Tidier interface</string>
+    <string name="whats_new_1_3_interface_detail">Disruption alerts behind the bell, more room for your favorites list, a bigger nearby stations button and clearer notices.</string>
+    <string name="whats_new_1_3_accessibility_title">More accessible</string>
+    <string name="whats_new_1_3_accessibility_detail">Higher contrast, more room for large text and better TalkBack support.</string>
 </resources>

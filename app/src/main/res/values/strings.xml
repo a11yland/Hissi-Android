@@ -141,4 +141,12 @@
         <item quantity="one">%1$d Station in der Nähe gefunden</item>
         <item quantity="other">%1$d Stationen in der Nähe gefunden</item>
     </plurals>
+    <string name="whats_new_1_3_nearby_title">Mehr Stationen in der Nähe</string>
+    <string name="whats_new_1_3_nearby_detail">Auch Stationen, deren Aufzüge ohne Standort gemeldet werden, erscheinen jetzt in der Nähe – zum Beispiel U Klosterstraße.</string>
+    <string name="whats_new_1_3_widgets_title">Widgets zeigen nur Störungen</string>
+    <string name="whats_new_1_3_widgets_detail">Widgets listen nur Aufzüge, die nicht in Betrieb sind. Läuft alles, zeigen sie das Hissi-Zeichen.</string>
+    <string name="whats_new_1_3_interface_title">Aufgeräumte Oberfläche</string>
+    <string name="whats_new_1_3_interface_detail">Störungsalarme hinter der Glocke, mehr Platz für deine Favoritenliste, ein größerer Knopf für Stationen in der Nähe und klarere Hinweise.</string>
+    <string name="whats_new_1_3_accessibility_title">Besser zugänglich</string>
+    <string name="whats_new_1_3_accessibility_detail">Höhere Kontraste, mehr Platz für große Schrift und bessere Unterstützung für TalkBack.</string>
 </resources>

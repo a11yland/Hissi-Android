@@ -7,6 +7,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Accessibility
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -69,7 +74,9 @@ private fun WelcomeContent() {
 
 // Curated per release; versions listed here must appear in
 // WelcomeGate.curatedVersions, or the sheet never shows. 1.0 has none — the
-// welcome says what the app does.
+// welcome says what the app does. Four rows at most: this is a sheet in the
+// way of the favorites, not release notes. 1.3 carries the iOS 1.1 notes
+// (the same changes arrived here) plus the accessibility work.
 @Composable
 private fun WhatsNewContent(version: String) {
     Text(
@@ -84,6 +91,12 @@ private fun WhatsNewContent(version: String) {
     )
     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
         when (version) {
+            "1.3" -> {
+                FeatureRow(Icons.Filled.LocationOn, R.string.whats_new_1_3_nearby_title, R.string.whats_new_1_3_nearby_detail)
+                FeatureRow(Icons.Filled.Widgets, R.string.whats_new_1_3_widgets_title, R.string.whats_new_1_3_widgets_detail)
+                FeatureRow(Icons.Filled.AutoAwesome, R.string.whats_new_1_3_interface_title, R.string.whats_new_1_3_interface_detail)
+                FeatureRow(Icons.Filled.Accessibility, R.string.whats_new_1_3_accessibility_title, R.string.whats_new_1_3_accessibility_detail)
+            }
             else -> Unit
         }
     }
