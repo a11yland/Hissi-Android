@@ -66,8 +66,10 @@ already runs TestFlight.
       `main`) with the new `versionName`. It increments `versionCode`,
       runs the tests, builds the signed AAB, commits the bump, tags
       `v<version>` and publishes a GitHub release with the AAB and the R8
-      mapping. The bump commit is pushed with the workflow token, so CI does
-      not run on it again (the release build already covered it).
+      mapping. The bump commit is created through the GitHub API with the
+      workflow token, so GitHub signs it (main requires verified
+      signatures) and CI does not run on it again (the release build
+      already covered it).
 - [ ] Download the AAB from the GitHub release; smoke-test the release build
       (not the debug build) on the AVD before uploading.
 - [ ] Upload the AAB to the internal-testing track, release notes DE/EN.

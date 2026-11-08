@@ -1,8 +1,9 @@
 name: Release
 
 # Manual only. Bumps the version in app/build.gradle.kts, builds the signed
-# release bundle, commits the bump, tags it and publishes a GitHub release
-# with the AAB and the R8 mapping. Uploading to Play stays manual (see
+# release bundle, commits the bump through the GitHub API (so GitHub signs it
+# and it passes the verified-signatures rule on main), tags it and publishes
+# a GitHub release with the AAB and the R8 mapping. Uploading to Play stays manual (see
 # docs/android-distribution.md).
 on:
   workflow_dispatch:
@@ -106,16 +107,48 @@ jobs:
           cp app/build/outputs/mapping/release/mapping.txt "dist/hissi-$VERSION-mapping.txt"
           ls -l dist
 
-      - name: Commit bump, tag and push
+      # main requires verified signatures, so a plain `git commit` + `git push`
+      # from the runner is rejected (GH013). Commits created through the REST
+      # API with the workflow token are signed by GitHub and count as verified.
+      # The tag is only created after main has moved, so a rejected update can
+      # no longer leave a tag pointing at a commit that is not on main.
+      - name: Commit bump and tag via GitHub API (signed)
         env:
+          GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.version }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/build.gradle.kts
-          git commit -m "chore(release): v$VERSION (versionCode $VERSION_CODE)"
-          git tag -a "v$VERSION" -m "Hissi $VERSION"
-          git push origin main "v$VERSION"
+          set -euo pipefail
+          file=app/build.gradle.kts
+          api="repos/$GITHUB_REPOSITORY"
+          parent="$GITHUB_SHA"
+
+          base_tree=$(gh api "$api/git/commits/$parent" --jq .tree.sha)
+          blob=$(jq -n --rawfile content "$file" '{content: $content, encoding: "utf-8"}' \
+            | gh api "$api/git/blobs" --input - --jq .sha)
+          tree=$(jq -n --arg base "$base_tree" --arg path "$file" --arg sha "$blob" \
+            '{base_tree: $base, tree: [{path: $path, mode: "100644", type: "blob", sha: $sha}]}' \
+            | gh api "$api/git/trees" --input - --jq .sha)
+          # No author/committer: GitHub then signs the commit as github-actions[bot].
+          commit=$(jq -n --arg msg "chore(release): v$VERSION (versionCode $VERSION_CODE)" \
+            --arg tree "$tree" --arg parent "$parent" \
+            '{message: $msg, tree: $tree, parents: [$parent]}' \
+            | gh api "$api/git/commits" --input - --jq .sha)
+
+          verified=$(gh api "$api/git/commits/$commit" --jq .verification.verified)
+          echo "Bump commit $commit (verified: $verified)"
+          if [ "$verified" != "true" ]; then
+            echo "::error::GitHub did not sign the bump commit; main would reject it."
+            exit 1
+          fi
+
+          # Fast-forward only: fails if main moved since the run started.
+          gh api -X PATCH "$api/git/refs/heads/main" -f sha="$commit" -F force=false >/dev/null
+
+          tag=$(jq -n --arg tag "v$VERSION" --arg msg "Hissi $VERSION" --arg sha "$commit" \
+            '{tag: $tag, message: $msg, object: $sha, type: "commit"}' \
+            | gh api "$api/git/tags" --input - --jq .sha)
+          gh api "$api/git/refs" -f ref="refs/tags/v$VERSION" -f sha="$tag" >/dev/null
+          echo "Tagged v$VERSION -> $commit"
 
       - name: Publish GitHub release
         env:
