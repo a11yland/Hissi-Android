@@ -1,5 +1,5 @@
 [versions]
-agp = "9.5.0"
+agp = "9.5.1"
 # Must match the KGP version AGP bundles for built-in Kotlin (see the
 # org.jetbrains.kotlin:kotlin-gradle-plugin dependency in AGP's POM).
 kotlin = "2.2.10"
