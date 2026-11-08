@@ -107,7 +107,8 @@ the catalog before bumping anything.
 - `.github/workflows/release.yml`: manual, from `main` only. Bumps
   `versionCode`/`versionName` in `app/build.gradle.kts`, builds the signed
   bundle from repository secrets, tags `v<version>` and publishes a GitHub
-  release. Play upload stays manual (`docs/android-distribution.md`).
+  release. `main` requires verified signatures, so the bump commit and tag
+  are created via the GitHub API (signed by GitHub), never `git push`. Play upload stays manual (`docs/android-distribution.md`).
 
 ## Accessibility
 
