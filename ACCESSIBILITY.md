@@ -28,9 +28,16 @@ What the code already does:
   S-Bahn, …") instead of the badge letters and are marked as headings
   (`ui/SearchResultsContent.kt`). Screen headlines, region headers and the
   about sheet sections are headings. Decorative icons have
-  `contentDescription = null`; icon buttons (refresh, theme, alerts, sort,
-  clear/close search, back) have labels. Label/value pairs on the detail
-  screen and notice cards are merged into one element.
+  `contentDescription = null`; icon buttons (about, refresh, theme, alerts,
+  sort, favorite star, clear/close search, back) have labels and keep their
+  Button role. The search field has a persistent label, the alerts row is one
+  switch with its title and hint as the name, the sort menu exposes the active
+  order as selected, and the about sheet link rows say that they open the
+  browser. Label/value pairs on the detail screen and notice cards are merged
+  into one element.
+- **Screen structure.** The detail screen announces itself through a pane
+  title and carries the station name as a heading; the nearby block's title
+  is a heading (`ui/ElevatorDetailScreen.kt`, `ui/NearbySection.kt`).
 - **No drag-only interaction for assistive technology.** Favorites can be
   reordered by long-press drag, and the rows also offer "Nach oben
   bewegen"/"Nach unten bewegen" as custom accessibility actions; the new
@@ -38,36 +45,51 @@ What the code already does:
   (`ui/ContentScreen.kt`, `FavoritesContent`). Pull-to-refresh has a refresh
   button as an alternative.
 - **Live regions** announce the refresh error (`RefreshError`), the search
-  error and the "Status wird aktualisiert …" banner for the not-yet-refreshed
-  search results (`ui/SearchResultsContent.kt`).
+  error, the "Status wird aktualisiert …" banner for the not-yet-refreshed
+  search results (`ui/SearchResultsContent.kt`) and the nearby locating and
+  its result ("3 Stationen in der Nähe gefunden", `ui/NearbySection.kt`).
+  While the favorites refresh, the refresh button stays in place, disabled,
+  with the state "Wird aktualisiert", so TalkBack focus is not lost. A manual
+  refresh always answers ("Aktualisiert, keine Änderung" or the change); a
+  routine poll speaks only when a status really changed, in the words of the
+  disruption notification (`DisruptionAlert` rules, `ui/MonitorViewModel.kt`).
+- **Back from the detail screen** the favorites list keeps its scroll
+  position, and the opened row gets the focus back for TalkBack and keyboard
+  users (`ui/ContentScreen.kt`).
 - **Voice Access.** The map and Street View snippets are one button each whose
   accessible name contains the visible capsule text ("In Karten öffnen",
   "Street View öffnen"), so speaking what is on screen works
-  (`ui/MapSnippet.kt`, `ui/StreetViewSnippet.kt`).
+  (`ui/MapSnippet.kt`, `ui/StreetViewSnippet.kt`). The Street View button
+  only exists once a panorama is confirmed; without the Google Maps app it
+  opens the panorama in the browser.
 - **Font scaling.** All text uses `sp` through the Material 3 type scale, in
-  the app and in the widgets. Nearby rows allow two lines for name and status;
-  the about sheet and the detail screen scroll.
-- **Target size.** Material icon buttons use the 48 dp minimum. The pinned
-  action above the search field, the nearby opt-in button and the recent-search
-  chips (including their remove button) are 44 dp tall on purpose (2.5.5,
+  the app and in the widgets. Nearby rows and widget texts allow two lines for
+  names and status; recent-search chips and the map snippet have minimum, not
+  fixed, heights; the detail screen's station name wraps as a headline below
+  the app bar; the about sheet and the detail screen scroll.
+- **Target size.** Material icon buttons and text buttons use the 48 dp
+  minimum, including the "Einstellungen öffnen" and battery-settings actions;
+  the about sheet link rows are at least 48 dp tall. The pinned action above
+  the search field, the nearby opt-in button and the recent-search chips
+  (including their remove button) are at least 44 dp tall on purpose (2.5.5,
   `ui/ContentScreen.kt` `PinnedAction`, `ui/NearbySection.kt`,
   `ui/RecentsContent.kt`).
 - **Contrast.** The "Creme-Lila" palette lives in `core/.../Palette.kt` as hex
   values; `PaletteTest` checks it on every CI run: the tint (buttons, links,
-  star) and the network badges at 7:1, status and secondary text at 4.5:1,
-  status symbols at 3:1 against every ground. Computed ratios (screen
+  star), the network badges, the status, secondary, error and primary text at
+  7:1 (AAA), status symbols at 3:1 against every ground. Computed ratios (screen
   background / row surface / high surface):
 
   | Pair | Light | Dark |
   |---|---|---|
   | Primary text (`onSurface`) | 17.3 / 18.5 / 15.7 | 17.3 / 15.1 / 13.2 |
   | Tint as text (primary) | 8.5 / 9.1 / 7.7 | 11.2 / 9.8 / 8.6 |
-  | Secondary text (`onSurfaceVariant`, `outline`) | 7.0 / 7.5 / 6.4 | 9.0 / 7.9 / 6.9 |
-  | Status text "working" | 5.9 / 6.3 / 5.3 | 11.5 / 10.1 / 8.8 |
-  | Status text "unknown" | 6.2 / 6.6 / 5.6 | 11.4 / 10.0 / 8.7 |
-  | Status text "broken" | 6.2 / 6.6 / 5.6 | 7.1 / 6.2 / 5.4 |
+  | Secondary text (`onSurfaceVariant`, `outline`) | 7.8 / 8.3 / 7.1 | 9.3 / 8.1 / 7.1 |
+  | Status text "working" | 7.8 / 8.4 / 7.1 | 11.5 / 10.1 / 8.8 |
+  | Status text "unknown" | 7.8 / 8.3 / 7.1 | 11.4 / 10.0 / 8.7 |
+  | Status text "broken" | 7.8 / 8.3 / 7.1 | 9.2 / 8.1 / 7.1 |
+  | Error text (palette, = "broken") | 7.8 / 8.3 / 7.1 | 9.2 / 8.1 / 7.1 |
   | Status symbols (non-text) | 3.2 to 4.7 | 5.4 to 11.5 |
-  | Error text (Material default, not in the palette) | 5.9 / 6.3 / 5.4 | 11.2 / 9.8 / 8.5 |
   | Label on filled button | 8.5 | 9.1 |
   | Tint on its tonal fill | about 7.0 | 8.9 |
 
@@ -87,8 +109,9 @@ What the code already does:
   language on Android 13+ (`res/xml/locales_config.xml`).
 - **Widgets.** Both Glance widgets (`widget/HissiWidget.kt`,
   `widget/NearbyWidget.kt`) give every state one spoken sentence via
-  `contentDescription`, never show a false all-clear, and use the palette's
-  status text colours.
+  `contentDescription`, never show a false all-clear, and draw only palette
+  colours (`widget/WidgetColors.kt`), not the wallpaper-derived dynamic
+  colours, so every pair on the tile is covered by `PaletteTest`.
 - **Permissions in context.** Location and notification prompts only appear
   after a tap on the matching control, never on launch.
 
@@ -115,40 +138,10 @@ Unverified items are marked as such; please report what you find.
 
 **Screen reader and semantics**
 
-- The app bar logo button that opens "Über Hissi" has no accessible name: the
-  `IconButton` wraps `AppIcon`, whose image has `contentDescription = null`.
-  The string `about_open` exists but is unused (`ui/ContentScreen.kt`
-  `navigationIcon`, `ui/AboutSheet.kt` `AppIcon`). 4.1.2, 1.1.1.
-- The favorite star applies `clearAndSetSemantics` to the `IconButton`, which
-  also clears the click action and Button role the button sets itself. The
-  favorite toggle is therefore likely not exposed as an actionable button to
-  TalkBack, Switch Access and Voice Access (`ui/ElevatorRow.kt`
-  `FavoriteStar`). Needs verification with TalkBack. 4.1.2.
-- The disruption-alerts `Switch` has no label of its own; the title and hint
-  next to it are a separate element (`ui/AlertsSection.kt`). 4.1.2, 1.3.1.
-- The sort menu shows the active order only through a check icon with no
-  description; the selected state is not exposed (`ui/ContentScreen.kt`
-  `SortMenu`). 1.3.1, 4.1.2.
-- The search field has only a placeholder ("Station finden"), no persistent
-  label (`ui/ContentScreen.kt` `OutlinedTextField`). 3.3.2, 2.5.3.
-- "Einstellungen öffnen" links (nearby denied, alerts hints) and the about
-  sheet link rows are clickable text/rows without a role (`ui/NearbySection.kt`,
-  `ui/AlertsSection.kt` `SettingsHint`, `ui/AboutSheet.kt` `LinkRow`). The link
-  rows do not say that they open the browser. 4.1.2, 2.4.4.
-- While Street View has no coverage, its snippet is kept at 1 dp height, but
-  its overlay still carries a label, Button role and click action, so TalkBack
-  can focus an invisible "Straßenansicht …" button (`ui/StreetViewSnippet.kt`,
-  `ui/ElevatorDetailScreen.kt`). Without the Google Maps app the tap does
-  nothing and gives no feedback. 1.3.2, 4.1.2.
-- The detail screen has no heading (the station name is the app bar title)
-  and no announced screen change when it opens or closes; focus placement
-  after the switch is unverified (`ui/ElevatorDetailScreen.kt`,
-  `ui/ContentScreen.kt`). 1.3.1, 2.4.6, 2.4.3.
-- The nearby block's "In der Nähe" title is not a heading, and its
-  "Standort wird ermittelt …" and "Status wird aktualisiert …" states are not
-  live regions, unlike the search banner (`ui/NearbySection.kt`). While the
-  favorites refresh, the refresh button is replaced by an unlabelled spinner,
-  so focus on it is lost (`ui/ContentScreen.kt`). 4.1.3, 1.3.1, 2.4.3.
+- Back from a favorite's detail screen, the opened row is meant to get the
+  focus back (`ui/ContentScreen.kt` `FavoritesContent`). Whether TalkBack
+  follows that focus in touch mode is unverified on a device. Back from a
+  search result, focus is not restored. 2.4.3.
 
 **Input and targets**
 
@@ -156,37 +149,14 @@ Unverified items are marked as such; please report what you find.
   drag; there is no single-pointer or keyboard alternative outside the
   TalkBack/Switch Access custom actions (`ui/ContentScreen.kt`
   `FavoritesContent`). 2.5.7, 2.1.1.
-- The "Einstellungen öffnen" and battery-settings texts are bare `clickable`
-  text of about 20 dp height, below the 24 dp minimum (`ui/NearbySection.kt`,
-  `ui/AlertsSection.kt` `SettingsHint`). The about sheet link rows are about
-  36 dp (`ui/AboutSheet.kt` `LinkRow`). 2.5.8, 2.5.5.
 - Focus indication relies on Material defaults; hardware-keyboard and Switch
   Access navigation have not been tested. 2.4.7, 2.4.11, 2.4.13.
 
 **Text size and layout**
 
-- Recent-search chips have a fixed `height(44.dp)` with `bodyLarge` text, so
-  the label clips at large font sizes; `heightIn(min = 44.dp)` would keep the
-  minimum (`ui/RecentsContent.kt`). 1.4.4.
-- The detail app bar title is `maxLines = 1` without ellipsis; long station
-  names are cut at large font sizes (`ui/ElevatorDetailScreen.kt`). 1.4.4,
-  1.4.10.
-- Widgets use fixed 11 to 14 sp text with `maxLines = 1` for names and status
-  lines (`widget/HissiWidget.kt`, `widget/NearbyWidget.kt`). 1.4.4.
-- The map snippet is a fixed 160 dp; the location pill and the "In Karten
-  öffnen" capsule can collide at large font sizes on narrow phones
-  (`ui/MapSnippet.kt`). Unverified. 1.4.4.
-
-**Contrast (AA met, AAA bonus goal)**
-
-- Light status text reaches 5.3 to 6.6:1 and dark "broken" text 5.4 to 7.1:1;
-  secondary text on the high surface is 6.4:1 (light) and 6.9:1 (dark). AA is
-  met and tested, AAA (7:1) is not (`core/.../Palette.kt`). 1.4.6.
-- The error colour is the Material default, not part of the palette and not
-  covered by `PaletteTest` (light 5.4 to 6.3:1) (`MainActivity.kt`). 1.4.6.
-- Widget text in `GlanceTheme.colors.onSurface`/`onSurfaceVariant` (dynamic
-  colour on Android 12+) is drawn on the fixed palette ground; that contrast
-  is not checked (`widget/HissiWidget.kt`, `widget/NearbyWidget.kt`). 1.4.3.
+- The fixes for large font and display sizes (chips, detail headline, map
+  capsules, two-line widget texts) are not yet verified on a device at the
+  largest settings in portrait and landscape. 1.4.4, 1.4.10.
 
 **Process**
 
