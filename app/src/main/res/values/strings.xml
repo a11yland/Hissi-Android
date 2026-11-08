@@ -136,4 +136,9 @@
     <string name="onboarding_continue">Weiter</string>
     <string name="link_open_browser">im Browser öffnen</string>
     <string name="refresh_no_change">Aktualisiert, keine Änderung</string>
+    <string name="refreshing_state">Wird aktualisiert</string>
+    <plurals name="nearby_found">
+        <item quantity="one">%1$d Station in der Nähe gefunden</item>
+        <item quantity="other">%1$d Stationen in der Nähe gefunden</item>
+    </plurals>
 </resources>

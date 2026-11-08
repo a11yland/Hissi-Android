@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -71,6 +72,12 @@ fun NearbySection(search: SearchViewModel, onSelect: (String) -> Unit) {
     // "not loaded yet", not "nothing within reach".
     var hasLoaded by remember { mutableStateOf(false) }
     var isRefreshingStatus by remember { mutableStateOf(false) }
+    // What the locating says without moving focus: "Standort wird ermittelt
+    // …", then the result. Spoken through a polite live region (see below) —
+    // the tapped button is gone by then, so nothing else would tell TalkBack
+    // users that the rows arrived. Set once per step: the status refresh
+    // ending is not re-announced, the rows say their status when focused.
+    var announcement by remember { mutableStateOf("") }
     // "1 km", formatted like the row distances.
     val radiusLabel = remember { distanceLabel(NearbyStations.WALKING_RADIUS_METERS) }
 
@@ -124,6 +131,7 @@ fun NearbySection(search: SearchViewModel, onSelect: (String) -> Unit) {
         when (state) {
             NearbyState.Locating -> {
                 hasLoaded = false
+                announcement = context.getString(R.string.nearby_locating)
                 val fix = withTimeoutOrNull(15_000) { currentLocation(context) }
                 state = if (fix == null) {
                     // Fall back to the button rather than an error screen —
@@ -132,6 +140,15 @@ fun NearbySection(search: SearchViewModel, onSelect: (String) -> Unit) {
                 } else {
                     stations = search.nearbyStations(fix.first, fix.second)
                     hasLoaded = true
+                    // Phase 2 starts right away for any rows, so it rides
+                    // along in the same sentence.
+                    announcement = if (stations.isEmpty()) {
+                        context.getString(R.string.nearby_none_found)
+                    } else {
+                        context.resources.getQuantityString(
+                            R.plurals.nearby_found, stations.size, stations.size,
+                        ) + ", " + context.getString(R.string.updating_status)
+                    }
                     NearbyState.Located
                 }
             }
@@ -176,6 +193,32 @@ fun NearbySection(search: SearchViewModel, onSelect: (String) -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            // The shown statuses are the snapshot's and the refresh is still
+            // out — without this a stale row would look final.
+            if (isRefreshingStatus) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.semantics(mergeDescendants = true) {},
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                    Text(
+                        stringResource(R.string.updating_status),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            // Always composed, so TalkBack reads every change of its text —
+            // the same pattern as the favorites' move announcement.
+            Box(
+                modifier = Modifier
+                    .size(1.dp)
+                    .semantics {
+                        liveRegion = LiveRegionMode.Polite
+                        contentDescription = announcement
+                    },
+            )
         }
 
         when (state) {

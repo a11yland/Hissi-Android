@@ -288,19 +288,27 @@ fun ContentScreen(
                         SortMenu(monitor)
                     }
                     if (mode == Mode.Favorites && favorites.isNotEmpty()) {
-                        if (isRefreshing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier
-                                    .padding(horizontal = 12.dp)
-                                    .size(24.dp),
-                                strokeWidth = 2.dp,
-                            )
-                        } else {
-                            IconButton(onClick = { scope.launch { monitor.refresh() } }) {
-                                Icon(
-                                    Icons.Filled.Refresh,
-                                    contentDescription = stringResource(R.string.action_refresh),
+                        // The button stays while the refresh runs — disabled,
+                        // the spinner inside, "wird aktualisiert" as its
+                        // state — so TalkBack focus on it isn't lost to a
+                        // node that replaced it.
+                        val refreshLabel = stringResource(R.string.action_refresh)
+                        val refreshingState = stringResource(R.string.refreshing_state)
+                        IconButton(
+                            onClick = { scope.launch { monitor.refresh(manual = true) } },
+                            enabled = !isRefreshing,
+                            modifier = Modifier.semantics {
+                                contentDescription = refreshLabel
+                                if (isRefreshing) stateDescription = refreshingState
+                            },
+                        ) {
+                            if (isRefreshing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp,
                                 )
+                            } else {
+                                Icon(Icons.Filled.Refresh, contentDescription = null)
                             }
                         }
                     }
