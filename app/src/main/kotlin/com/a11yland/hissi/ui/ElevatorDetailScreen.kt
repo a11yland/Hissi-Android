@@ -39,7 +39,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.a11yland.hissi.R
@@ -76,9 +79,16 @@ fun ElevatorDetailScreen(
     )
 
     Scaffold(
+        // A pane title makes TalkBack announce the switch to this screen —
+        // it is a state-based overlay, not an activity or a nav destination
+        // that would say so on its own.
+        modifier = Modifier.semantics { paneTitle = elevator.stationName },
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(elevator.stationName, maxLines = 1) },
+                // Empty on purpose: the station name is the headline below the
+                // bar (DetailFields), where it can wrap at any font size — a
+                // one-line bar title cut long names off.
+                title = {},
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -176,6 +186,14 @@ fun ElevatorDetailScreen(
 private fun DetailFields(elevator: MonitoredElevator) {
     val status = ElevatorStatus.from(elevator.isWorking)
     val color = statusColor(status)
+
+    // The screen's heading, like the favorites headline below the app bar.
+    Text(
+        elevator.stationName,
+        style = MaterialTheme.typography.headlineSmall,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.semantics { heading() },
+    )
 
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
