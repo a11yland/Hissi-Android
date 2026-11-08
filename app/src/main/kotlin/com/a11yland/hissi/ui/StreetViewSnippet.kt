@@ -105,21 +105,31 @@ fun StreetViewSnippet(
             isZoomGesturesEnabled = false,
         )
         // One tap surface with one accessible name, mirroring the map
-        // snippet's overlay.
+        // snippet's overlay — only once coverage is confirmed. Before that
+        // the snippet sits at one invisible pixel, and a focusable "Straßen-
+        // ansicht …" button there would lead TalkBack to a place with no
+        // panorama.
         Box(
-            modifier = Modifier
-                .matchParentSize()
-                .clickable(onClickLabel = stringResource(R.string.open_street_view)) { onOpen() }
-                .clearAndSetSemantics {
-                    contentDescription = label
-                    role = Role.Button
-                    onClick { onOpen(); true }
-                },
+            modifier = if (covered) {
+                Modifier
+                    .matchParentSize()
+                    .clickable(onClickLabel = stringResource(R.string.open_street_view)) { onOpen() }
+                    .clearAndSetSemantics {
+                        contentDescription = label
+                        role = Role.Button
+                        onClick { onOpen(); true }
+                    }
+            } else {
+                Modifier
+                    .matchParentSize()
+                    .clearAndSetSemantics { }
+            },
         )
         // Same opaque capsule as the map's open-in-Maps affordance — without
         // it the snippet reads as static content.
         Surface(
             onClick = onOpen,
+            enabled = covered,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(8.dp)
@@ -150,11 +160,18 @@ fun StreetViewSnippet(
 
 private fun openStreetView(context: Context, latitude: Double, longitude: Double) {
     val uri = Uri.parse("google.streetview:cbll=$latitude,$longitude")
-    // Street View lives in the Google Maps app; without it the tap stays a
-    // no-op — the preview itself already showed the street.
-    runCatching {
+    // Street View lives in the Google Maps app. Without it the Maps URL
+    // opens the same panorama in the browser — a tap that does nothing at
+    // all would give no feedback.
+    val opened = runCatching {
         context.startActivity(
             Intent(Intent.ACTION_VIEW, uri).setPackage("com.google.android.apps.maps"),
         )
+    }.isSuccess
+    if (!opened) {
+        val web = Uri.parse(
+            "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=$latitude,$longitude",
+        )
+        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, web)) }
     }
 }
