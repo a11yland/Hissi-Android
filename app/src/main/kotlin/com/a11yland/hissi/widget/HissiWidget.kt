@@ -186,7 +186,7 @@ internal fun AllClear(label: String, markSize: androidx.compose.ui.unit.Dp, modi
             Text(
                 label,
                 style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium, color = statusGreen),
-                maxLines = 1,
+                maxLines = 2,
             )
         }
     }
@@ -274,7 +274,7 @@ private fun ElevatorList(
                         fontWeight = FontWeight.Medium,
                         color = summaryColor(summary),
                     ),
-                    maxLines = 1,
+                    maxLines = 2,
                 )
             }
         }
@@ -290,6 +290,9 @@ private fun ElevatorList(
     }
 }
 
+// Names and descriptions get two lines: at large system font sizes one line
+// would cut long station names mid-word; a row less beats a name nobody
+// can read.
 @Composable
 private fun ElevatorRow(elevator: MonitoredElevator) {
     val context = LocalContext.current

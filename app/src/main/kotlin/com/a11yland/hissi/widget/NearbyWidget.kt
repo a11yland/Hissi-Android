@@ -233,7 +233,7 @@ private fun Nearest(station: NearbyStations.Station, modifier: GlanceModifier) {
             Text(
                 stationStatusText(context, station),
                 style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, color = color),
-                maxLines = 1,
+                maxLines = 2,
             )
         }
         Text(
@@ -314,7 +314,7 @@ private fun StationRow(station: NearbyStations.Station) {
             Text(
                 stationStatusText(context, station),
                 style = TextStyle(fontSize = 11.sp, color = color),
-                maxLines = 1,
+                maxLines = 2,
             )
         }
         Spacer(GlanceModifier.width(8.dp))

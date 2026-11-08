@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -57,9 +57,11 @@ fun RecentsContent(search: SearchViewModel, onPick: (String) -> Unit) {
                 for (term in recents) {
                     AssistChip(
                         onClick = { onPick(term) },
-                        // 44 dp — WCAG 2.5.5 (AAA) target size, the nearby
-                        // button's height; the default chip is 32 dp.
-                        modifier = Modifier.height(44.dp),
+                        // At least 44 dp — WCAG 2.5.5 (AAA) target size, the
+                        // nearby button's height; the default chip is 32 dp.
+                        // A minimum, not a fixed height: at large font sizes
+                        // the label grows past it instead of being clipped.
+                        modifier = Modifier.heightIn(min = 44.dp),
                         label = { Text(term, style = MaterialTheme.typography.bodyLarge) },
                         trailingIcon = {
                             val removeLabel = stringResource(R.string.recent_remove, term)

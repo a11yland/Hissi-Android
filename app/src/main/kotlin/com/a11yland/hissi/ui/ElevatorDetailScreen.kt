@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -161,9 +162,11 @@ fun ElevatorDetailScreen(
                         longitude = elevator.longitude!!,
                         stationName = elevator.stationName,
                         onOpen = { openInMaps(context, elevator) },
+                        // At least 160 dp, more when the capsules need it
+                        // at large font sizes (MapSnippet stacks them).
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(160.dp)
+                            .heightIn(min = 160.dp)
                             .clip(RoundedCornerShape(12.dp)),
                     )
                     StreetViewSnippet(

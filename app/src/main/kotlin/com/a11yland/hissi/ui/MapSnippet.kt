@@ -7,8 +7,13 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
@@ -174,59 +179,66 @@ fun MapSnippet(
                     onClick { onOpen(); true }
                 },
         )
-        // Priming affordance for the location prompt, layered above the tap
-        // overlay so it stays tappable and focusable. The system dialog fires
-        // from this tap and from nothing else — same rule as the nearby
-        // suggestions. Once the grant is in the dot speaks for itself and the
-        // pill goes; a denial removes it without nagging. Top start is the
-        // one free corner — the open-in-Maps capsule holds the bottom end,
-        // and at 160 dp both would collide on a narrow phone.
-        if (!authorized && !denied) {
-            MapPill(
-                text = stringResource(R.string.map_show_location),
-                icon = Icons.Filled.LocationOn,
-                tint = actionBlue,
-                onClick = {
-                    permissionLauncher.launch(
-                        arrayOf(
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION,
-                        ),
-                    )
-                },
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(8.dp),
-            )
-        }
-        // A plain Surface deliberately blocks touch propagation, so the
-        // capsule must be clickable itself; semantics stay cleared — the
-        // full-size overlay above is the one accessible target.
-        Surface(
-            onClick = onOpen,
+        // The two capsules in one column instead of two aligned corners: at
+        // large font sizes on a narrow phone each wraps to two lines, and
+        // stacked they make the snippet taller (the caller gives it a minimum,
+        // not a fixed height) instead of overlapping. Above the tap overlay so
+        // they stay tappable and focusable.
+        Column(
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(8.dp)
-                .clearAndSetSemantics { },
-            shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                .fillMaxSize()
+                .defaultMinSize(minHeight = 160.dp)
+                .padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    Icons.Filled.Map,
-                    contentDescription = null,
+            // Priming affordance for the location prompt. The system dialog
+            // fires from this tap and from nothing else — same rule as the
+            // nearby suggestions. Once the grant is in the dot speaks for
+            // itself and the pill goes; a denial removes it without nagging.
+            if (!authorized && !denied) {
+                MapPill(
+                    text = stringResource(R.string.map_show_location),
+                    icon = Icons.Filled.LocationOn,
                     tint = actionBlue,
-                    modifier = Modifier.padding(end = 6.dp),
+                    onClick = {
+                        permissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION,
+                            ),
+                        )
+                    },
                 )
-                Text(
-                    stringResource(R.string.open_in_maps),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = actionBlue,
-                )
+            }
+            Spacer(Modifier.weight(1f))
+            // A plain Surface deliberately blocks touch propagation, so the
+            // capsule must be clickable itself; semantics stay cleared — the
+            // full-size overlay above is the one accessible target.
+            Surface(
+                onClick = onOpen,
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .clearAndSetSemantics { },
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Filled.Map,
+                        contentDescription = null,
+                        tint = actionBlue,
+                        modifier = Modifier.padding(end = 6.dp),
+                    )
+                    Text(
+                        stringResource(R.string.open_in_maps),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = actionBlue,
+                    )
+                }
             }
         }
     }
