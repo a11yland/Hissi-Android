@@ -109,6 +109,15 @@ the catalog before bumping anything.
   bundle from repository secrets, tags `v<version>` and publishes a GitHub
   release. `main` requires verified signatures, so the bump commit and tag
   are created via the GitHub API (signed by GitHub), never `git push`. Play upload stays manual (`docs/android-distribution.md`).
+  It refuses to run while the seed or the test fixtures differ from
+  Hissi-iOS `main`.
+- `.github/workflows/shared-files.yml`: compares `app/src/main/assets/seed-catalog.json`
+  and `core/src/test/fixtures/` with Hissi-iOS `main`. On a push or pull
+  request touching them it only warns; weekly (Mondays, after the iOS seed
+  drift check) and on a manual run it opens or rebuilds a `shared-sync` PR
+  that copies the iOS versions over (commit via the GitHub API, signed by
+  GitHub). Needs "Allow GitHub Actions to create and approve pull requests"
+  in the repo's Actions settings.
 
 ## Accessibility
 

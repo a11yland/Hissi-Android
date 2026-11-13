@@ -35,6 +35,10 @@ the map.
   iOS Swift package (`Hissi-iOS/HissiTests/Tests/Fixtures`), so behavioral drift
   between the two ports surfaces in CI.
 
+The `shared-files` workflow keeps both copies in step: it opens a sync PR
+when Hissi-iOS `main` has newer versions, and the release workflow refuses to
+run until they match.
+
 See [`docs/`](docs/README.md) for the Android-specific plan, the Play distribution
 notes and the store listing; requirements and architecture are documented in
 [Hissi-iOS/docs](https://github.com/a11yland/Hissi-iOS/tree/main/docs), the baseline

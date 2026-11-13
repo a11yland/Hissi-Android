@@ -1,0 +1,154 @@
+name: Shared files
+
+# The seed catalog and the :core test fixtures are generated in Hissi-iOS and
+# copied here (README "Shared with the iOS app"). This keeps the copies
+# honest: it compares them against Hissi-iOS main and
+#   - on a push or pull request touching them, warns (Hissi-iOS updates
+#     first, so a short gap is normal and must not turn unrelated CI red),
+#   - on the weekly schedule or a manual run, opens (or rebuilds) a PR from
+#     branch `shared-sync` that copies the iOS versions over.
+# The release workflow runs the same comparison as a hard gate.
+#
+# The sync commit is made through the Git data API, so GitHub signs it and
+# main's signature rule accepts the merge. Needs "Allow GitHub Actions to
+# create and approve pull requests" (Settings → Actions → General). A PR
+# opened with the workflow token starts no other workflows — CI runs again
+# after the merge.
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC, an hour after Hissi-iOS's seed drift check
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "app/src/main/assets/seed-catalog.json"
+      - "core/src/test/fixtures/**"
+      - ".github/workflows/shared-files.yml"
+  pull_request:
+    paths:
+      - "app/src/main/assets/seed-catalog.json"
+      - "core/src/test/fixtures/**"
+      - ".github/workflows/shared-files.yml"
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write # the shared-sync label
+
+concurrency:
+  group: shared-files
+  cancel-in-progress: false
+
+env:
+  SEED: app/src/main/assets/seed-catalog.json
+  FIXTURES: core/src/test/fixtures
+  IOS_SEED: ios/Shared/Resources/seed-catalog.json
+  IOS_FIXTURES: ios/HissiTests/Tests/Fixtures
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check out the iOS originals
+        uses: actions/checkout@v5
+        with:
+          repository: a11yland/Hissi-iOS
+          ref: main
+          path: ios
+          sparse-checkout: |
+            Shared/Resources/seed-catalog.json
+            HissiTests/Tests/Fixtures/
+          sparse-checkout-cone-mode: false
+
+      - name: Compare
+        id: compare
+        run: |
+          set -euo pipefail
+          summary() {
+            jq -r '"generatedAt \(.generatedAt), \(.elevators | length) elevators, \(.stations // [] | length) stations"' "$1"
+          }
+          drift=0
+          {
+            echo "## Shared files differ from Hissi-iOS"
+            echo
+            if ! cmp -s "$SEED" "$IOS_SEED"; then
+              drift=1
+              echo "- **Seed catalog**"
+              echo "  - here: $(summary "$SEED")"
+              echo "  - Hissi-iOS: $(summary "$IOS_SEED")"
+            fi
+            if ! fixtures=$(diff -rq "$FIXTURES" "$IOS_FIXTURES"); then
+              drift=1
+              echo "- **Test fixtures**"
+              echo "$fixtures" | sed -E "s#$IOS_FIXTURES#Hissi-iOS#g; s#^#  - #"
+            fi
+          } > "$RUNNER_TEMP/report.md"
+          echo "drift=$drift" >> "$GITHUB_OUTPUT"
+          if [ "$drift" -eq 1 ]; then cat "$RUNNER_TEMP/report.md"; else echo "In step with Hissi-iOS."; fi
+
+      - name: Warn
+        if: steps.compare.outputs.drift == '1' && (github.event_name == 'push' || github.event_name == 'pull_request')
+        run: echo "::warning::Seed catalog or test fixtures differ from Hissi-iOS main — the weekly run opens a sync PR."
+
+      - name: Open or update sync PR
+        if: steps.compare.outputs.drift == '1' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          api="repos/$GITHUB_REPOSITORY"
+          branch=shared-sync
+
+          blob() {
+            jq -n --arg content "$(base64 -w0 "$1")" '{content: $content, encoding: "base64"}' \
+              | gh api "$api/git/blobs" --input - --jq .sha
+          }
+          # Tree entries: the seed, every iOS fixture (added or changed) and a
+          # deletion (sha null) for every fixture iOS no longer has.
+          entries=$(jq -n --arg path "$SEED" --arg sha "$(blob "$IOS_SEED")" \
+            '[{path: $path, mode: "100644", type: "blob", sha: $sha}]')
+          for f in "$IOS_FIXTURES"/*; do
+            entries=$(jq --arg path "$FIXTURES/$(basename "$f")" --arg sha "$(blob "$f")" \
+              '. + [{path: $path, mode: "100644", type: "blob", sha: $sha}]' <<<"$entries")
+          done
+          for f in "$FIXTURES"/*; do
+            [ -e "$IOS_FIXTURES/$(basename "$f")" ] && continue
+            entries=$(jq --arg path "$f" '. + [{path: $path, mode: "100644", type: "blob", sha: null}]' <<<"$entries")
+          done
+
+          base=$(gh api "$api/git/ref/heads/main" --jq .object.sha)
+          base_tree=$(gh api "$api/git/commits/$base" --jq .tree.sha)
+          tree=$(jq -n --arg base "$base_tree" --argjson entries "$entries" '{base_tree: $base, tree: $entries}' \
+            | gh api "$api/git/trees" --input - --jq .sha)
+          # No author/committer: GitHub then signs the commit as github-actions[bot].
+          commit=$(jq -n --arg tree "$tree" --arg parent "$base" \
+            '{message: "chore(seed): sync seed catalog and fixtures from Hissi-iOS", tree: $tree, parents: [$parent]}' \
+            | gh api "$api/git/commits" --input - --jq .sha)
+
+          if gh api "$api/git/ref/heads/$branch" >/dev/null 2>&1; then
+            gh api -X PATCH "$api/git/refs/heads/$branch" -f sha="$commit" -F force=true >/dev/null
+          else
+            gh api "$api/git/refs" -f ref="refs/heads/$branch" -f sha="$commit" >/dev/null
+          fi
+
+          {
+            cat "$RUNNER_TEMP/report.md"
+            echo
+            echo "---"
+            echo "Copied from [Hissi-iOS main](https://github.com/a11yland/Hissi-iOS/tree/main) by the shared-files workflow ([run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID))."
+          } > "$RUNNER_TEMP/pr.md"
+
+          gh label create shared-sync --repo "$GITHUB_REPOSITORY" \
+            --description "Seed catalog or test fixtures out of step with Hissi-iOS" \
+            --color D93F0B 2>/dev/null || true
+          existing=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$branch" --state open --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh pr edit "$existing" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/pr.md"
+          else
+            gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$branch" \
+              --title "chore(seed): sync seed catalog and fixtures from Hissi-iOS" \
+              --label shared-sync \
+              --body-file "$RUNNER_TEMP/pr.md"
+          fi
