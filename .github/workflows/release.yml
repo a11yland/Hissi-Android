@@ -46,7 +46,7 @@ jobs:
           fi
 
       # A release must not ship a seed (or test against fixtures) older than
-      # Hissi-iOS main — the shared-files workflow only warns day to day, so
+      # Hissi-iOS main — the Seed sync workflow only warns day to day, so
       # the gate is here. Merge its sync PR (or run it manually) first.
       - name: Check out the iOS originals
         uses: actions/checkout@v5
@@ -59,15 +59,15 @@ jobs:
             HissiTests/Tests/Fixtures/
           sparse-checkout-cone-mode: false
 
-      - name: Shared files in step with Hissi-iOS
+      - name: Seed and fixtures in step with Hissi-iOS
         run: |
           status=0
           if ! cmp -s app/src/main/assets/seed-catalog.json ios/Shared/Resources/seed-catalog.json; then
-            echo "::error::The seed catalog differs from Hissi-iOS main — merge the shared-sync PR first."
+            echo "::error::The seed catalog differs from Hissi-iOS main — merge the seed-sync PR first."
             status=1
           fi
           if ! diff -rq core/src/test/fixtures ios/HissiTests/Tests/Fixtures; then
-            echo "::error::The test fixtures differ from Hissi-iOS main — merge the shared-sync PR first."
+            echo "::error::The test fixtures differ from Hissi-iOS main — merge the seed-sync PR first."
             status=1
           fi
           # Out of the workspace before the build and the bump commit.

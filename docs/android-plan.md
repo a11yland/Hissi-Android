@@ -28,7 +28,7 @@ task, see `android-distribution.md`). Tracked in issue #8.
   (actor/`Codable`/Swift-concurrency interop friction, Gradle in the Xcode build
   chain) — extraction remains possible later if drift ever hurts.
 - **Separate repo** (since 2026-09-30, previously an `android/` Gradle root in
-  the iOS monorepo). Seed catalog, generator scripts and the seed-drift workflow
+  the iOS monorepo). Seed catalog, generator scripts and the Seed update workflow
   stay in Hissi-iOS; the seed and the test fixtures are copied here per release
   (see the top-level README). Requirements and architecture docs are not
   duplicated — Hissi-iOS/docs is the baseline.

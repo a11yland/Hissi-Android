@@ -1,4 +1,4 @@
-name: Shared files
+name: Seed sync
 
 # The seed catalog and the :core test fixtures are generated in Hissi-iOS and
 # copied here (README "Shared with the iOS app"). This keeps the copies
@@ -6,7 +6,7 @@ name: Shared files
 #   - on a push or pull request touching them, warns (Hissi-iOS updates
 #     first, so a short gap is normal and must not turn unrelated CI red),
 #   - on the weekly schedule or a manual run, opens (or rebuilds) a PR from
-#     branch `shared-sync` that copies the iOS versions over.
+#     branch `seed-sync` that copies the iOS versions over.
 # The release workflow runs the same comparison as a hard gate.
 #
 # The sync commit is made through the Git data API, so GitHub signs it and
@@ -16,27 +16,27 @@ name: Shared files
 # after the merge.
 on:
   schedule:
-    - cron: "0 6 * * 1" # Mondays 06:00 UTC, an hour after Hissi-iOS's seed drift check
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC, an hour after Hissi-iOS's Seed update
   workflow_dispatch:
   push:
     branches: [main]
     paths:
       - "app/src/main/assets/seed-catalog.json"
       - "core/src/test/fixtures/**"
-      - ".github/workflows/shared-files.yml"
+      - ".github/workflows/seed-sync.yml"
   pull_request:
     paths:
       - "app/src/main/assets/seed-catalog.json"
       - "core/src/test/fixtures/**"
-      - ".github/workflows/shared-files.yml"
+      - ".github/workflows/seed-sync.yml"
 
 permissions:
   contents: write
   pull-requests: write
-  issues: write # the shared-sync label
+  issues: write # the seed-sync label
 
 concurrency:
-  group: shared-files
+  group: seed-sync
   cancel-in-progress: false
 
 env:
@@ -46,7 +46,7 @@ env:
   IOS_FIXTURES: ios/HissiTests/Tests/Fixtures
 
 jobs:
-  compare:
+  sync:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -71,7 +71,7 @@ jobs:
           }
           drift=0
           {
-            echo "## Shared files differ from Hissi-iOS"
+            echo "## Seed or fixtures differ from Hissi-iOS"
             echo
             if ! cmp -s "$SEED" "$IOS_SEED"; then
               drift=1
@@ -99,7 +99,7 @@ jobs:
         run: |
           set -euo pipefail
           api="repos/$GITHUB_REPOSITORY"
-          branch=shared-sync
+          branch=seed-sync
 
           blob() {
             jq -n --arg content "$(base64 -w0 "$1")" '{content: $content, encoding: "base64"}' \
@@ -137,10 +137,10 @@ jobs:
             cat "$RUNNER_TEMP/report.md"
             echo
             echo "---"
-            echo "Copied from [Hissi-iOS main](https://github.com/a11yland/Hissi-iOS/tree/main) by the shared-files workflow ([run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID))."
+            echo "Copied from [Hissi-iOS main](https://github.com/a11yland/Hissi-iOS/tree/main) by the Seed sync workflow ([run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID))."
           } > "$RUNNER_TEMP/pr.md"
 
-          gh label create shared-sync --repo "$GITHUB_REPOSITORY" \
+          gh label create seed-sync --repo "$GITHUB_REPOSITORY" \
             --description "Seed catalog or test fixtures out of step with Hissi-iOS" \
             --color D93F0B 2>/dev/null || true
           existing=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$branch" --state open --json number --jq '.[0].number')
@@ -149,6 +149,6 @@ jobs:
           else
             gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$branch" \
               --title "chore(seed): sync seed catalog and fixtures from Hissi-iOS" \
-              --label shared-sync \
+              --label seed-sync \
               --body-file "$RUNNER_TEMP/pr.md"
           fi

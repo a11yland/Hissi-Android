@@ -35,7 +35,7 @@ the map.
   iOS Swift package (`Hissi-iOS/HissiTests/Tests/Fixtures`), so behavioral drift
   between the two ports surfaces in CI.
 
-The `shared-files` workflow keeps both copies in step: it opens a sync PR
+The Seed sync workflow (`.github/workflows/seed-sync.yml`) keeps both copies in step: it opens a sync PR
 when Hissi-iOS `main` has newer versions, and the release workflow refuses to
 run until they match.
 
