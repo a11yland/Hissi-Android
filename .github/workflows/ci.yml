@@ -3,10 +3,19 @@ name: CI
 # Unit tests and a debug build on pushes to main and on pull requests: the
 # :core tests against the shared fixtures, then :app assembled. Pull requests cover the feature branches, so the push trigger is limited to
 # main.
+# Documentation and store assets don't touch the build.
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "play/**"
   pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "play/**"
 
 jobs:
   test:

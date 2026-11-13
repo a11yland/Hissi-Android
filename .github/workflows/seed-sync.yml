@@ -5,7 +5,7 @@ name: Seed sync
 # honest: it compares them against Hissi-iOS main and
 #   - on a push or pull request touching them, warns (Hissi-iOS updates
 #     first, so a short gap is normal and must not turn unrelated CI red),
-#   - on the weekly schedule or a manual run, opens (or rebuilds) a PR from
+#   - on the daily schedule or a manual run, opens (or rebuilds) a PR from
 #     branch `seed-sync` that copies the iOS versions over.
 # The release workflow runs the same comparison as a hard gate.
 #
@@ -16,7 +16,10 @@ name: Seed sync
 # after the merge.
 on:
   schedule:
-    - cron: "0 6 * * 1" # Mondays 06:00 UTC, an hour after Hissi-iOS's Seed update
+    # Daily: a Seed update PR in Hissi-iOS is merged by hand, whenever that
+    # is, and the copy should follow the day after rather than a week later.
+    # A run without differences takes ~20 s and does nothing.
+    - cron: "0 6 * * *"
   workflow_dispatch:
   push:
     branches: [main]
@@ -90,7 +93,7 @@ jobs:
 
       - name: Warn
         if: steps.compare.outputs.drift == '1' && (github.event_name == 'push' || github.event_name == 'pull_request')
-        run: echo "::warning::Seed catalog or test fixtures differ from Hissi-iOS main — the weekly run opens a sync PR."
+        run: echo "::warning::Seed catalog or test fixtures differ from Hissi-iOS main — the daily run opens a sync PR."
 
       - name: Open or update sync PR
         if: steps.compare.outputs.drift == '1' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')

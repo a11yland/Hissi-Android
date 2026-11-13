@@ -102,7 +102,8 @@ the catalog before bumping anything.
 
 ## CI and release
 
-- `.github/workflows/ci.yml`: on push to `main` and on pull requests, runs
+- `.github/workflows/ci.yml`: on push to `main` and on pull requests (not
+  for Markdown, `docs/` or `play/` changes), runs
   `./gradlew test :app:assembleDebug` (Temurin 21). No lint, no UI tests.
 - `.github/workflows/release.yml`: manual, from `main` only. Bumps
   `versionCode`/`versionName` in `app/build.gradle.kts`, builds the signed
@@ -113,8 +114,7 @@ the catalog before bumping anything.
   Hissi-iOS `main`.
 - `.github/workflows/seed-sync.yml` ("Seed sync"): compares `app/src/main/assets/seed-catalog.json`
   and `core/src/test/fixtures/` with Hissi-iOS `main`. On a push or pull
-  request touching them it only warns; weekly (Mondays, after the iOS seed
-  Seed update) and on a manual run it opens or rebuilds a `seed-sync` PR
+  request touching them it only warns; daily and on a manual run it opens or rebuilds a `seed-sync` PR
   that copies the iOS versions over (commit via the GitHub API, signed by
   GitHub). Needs "Allow GitHub Actions to create and approve pull requests"
   in the repo's Actions settings.
