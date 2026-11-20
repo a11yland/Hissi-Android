@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import com.a11yland.hissi.HissiApplication
 import com.a11yland.hissi.R
 import com.a11yland.hissi.core.AccessibilityCloudClient
+import com.a11yland.hissi.core.AufzugsstatusClient
 import com.a11yland.hissi.core.EquipmentCatalog
 import com.a11yland.hissi.core.MonitoredElevator
 import com.a11yland.hissi.core.NearbyStations
@@ -15,8 +16,10 @@ import com.a11yland.hissi.core.RegionGroup
 import com.a11yland.hissi.core.SearchGrouping
 import com.a11yland.hissi.core.StatusMerge
 import com.a11yland.hissi.data.AppContainer
+import com.a11yland.hissi.data.FavoritesRefresher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,8 +29,10 @@ import kotlinx.coroutines.withContext
 // The Android counterpart of SearchService: the two-phase station search.
 // Phase 1 renders instantly from the persisted/cached catalog of any age (or
 // the bundled seed on first launch); phase 2 awaits the shared rebuild and
-// re-renders with live statuses. Stale results beat an error screen — the
-// error only shows when there is nothing to show at all.
+// re-renders with live statuses; side by side with it the Aufzugsstatus API
+// answers for the stations beyond the VBB (AufzugsstatusClient), each
+// re-grouping the results as it lands. Stale results beat an error screen —
+// the error only shows when there is nothing to show at all.
 class SearchViewModel(private val container: AppContainer) : ViewModel() {
     private val _regions = MutableStateFlow<List<RegionGroup>>(emptyList())
     val regions: StateFlow<List<RegionGroup>> = _regions.asStateFlow()
@@ -82,14 +87,15 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     // Live status for one search result before it is a favorite: one targeted
-    // request — the same path a favorites refresh takes, free while the
-    // catalog cache is fresh — instead of waiting for the search's full
+    // request — the same path a favorites refresh takes (StatusSources.resolve:
+    // the catalog for VBB ids, free while its cache is fresh; the Aufzugsstatus
+    // API for national ones) — instead of waiting for the search's full
     // rebuild, which the pushed detail would not even see. The result is
     // folded back into the row behind the detail (SearchGrouping.replacing),
     // so list and detail never disagree. Null when the request didn't answer
     // for the id; the caller keeps what it has.
     suspend fun refreshed(elevator: MonitoredElevator): MonitoredElevator? {
-        val record = runCatching { container.catalog().equipment(setOf(elevator.id)) }
+        val record = runCatching { FavoritesRefresher.sources(container).resolve(setOf(elevator.id)) }
             .getOrNull()?.get(elevator.id) ?: return null
         val merged = StatusMerge.apply(record, elevator)
         _regions.value = SearchGrouping.replacing(_regions.value, id = elevator.id, elevator = merged)
@@ -98,15 +104,21 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
 
     // On-device distance sort over the catalog snapshot (seed-backfilled
     // coordinates); the seed carries the sort when no snapshot exists yet.
+    // Beyond the VBB the catalog knows no station: then — and only then, so a
+    // Berlin position never reaches that server — the Aufzugsstatus API is
+    // asked, with a coordinate coarsened to about a kilometre. Its rows come
+    // with live statuses; the caller's phase 2 then has nothing to re-state.
     suspend fun nearbyStations(latitude: Double, longitude: Double): List<NearbyStations.Station> {
         val seed = container.seed()
         val stations = container.seedStations()
         val snapshot = container.catalog().snapshot()
-        return withContext(Dispatchers.Default) {
+        val local = withContext(Dispatchers.Default) {
             val catalog = snapshot
                 ?: EquipmentCatalog.overlaid(live = emptyList(), seed = seed, stations = stations)
             NearbyStations.nearest(latitude, longitude, catalog)
         }
+        if (local.isNotEmpty()) return local
+        return container.aufzugsstatus.nearbyStations(latitude, longitude).orEmpty()
     }
 
     // Phase 2 of the nearby suggestions: one targeted request over exactly the
@@ -145,39 +157,64 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
             // spinner; preview results are favoritable and bridge to their
             // live records on the next refresh.
             val snapshot = catalog.snapshot()
-            if (snapshot != null) {
-                _regions.value = grouped(trimmed, snapshot)
-            } else {
+            var localCatalog: List<AccessibilityCloudClient.Equipment>? = snapshot
+            if (snapshot == null) {
                 val seedRecords = container.seed()
                 val seedStations = container.seedStations()
                 val seed = withContext(Dispatchers.Default) {
                     EquipmentCatalog.overlaid(live = emptyList(), seed = seedRecords, stations = seedStations)
                 }
-                if (seed.isNotEmpty()) {
-                    _regions.value = grouped(trimmed, seed)
+                if (seed.isNotEmpty()) localCatalog = seed
+            }
+            _regions.value = grouped(trimmed, localCatalog)
+
+            // Phase 2, fresh, and the national lookup side by side: the shared
+            // rebuild (awaited when the snapshot was stale) re-renders the VBB
+            // results with live statuses; the Aufzugsstatus API answers for
+            // the rest of the country — a quick request that must not wait
+            // behind a 30 s catalog build, and a slow build that must not wait
+            // for it either. Each re-groups the results as it lands.
+            var nationalMatches: List<AccessibilityCloudClient.Equipment>? = null
+            var localFailed = false
+            var nationalFailed = false
+            coroutineScope {
+                launch {
+                    val all = catalog.all()
+                    if (all == null) localFailed = true else localCatalog = all
+                    _regions.value = grouped(trimmed, localCatalog, nationalMatches)
+                }
+                launch {
+                    val matches = container.aufzugsstatus.searchLifts(trimmed)
+                    if (matches == null) nationalFailed = true else nationalMatches = matches
+                    _regions.value = grouped(trimmed, localCatalog, nationalMatches)
                 }
             }
-
-            // Phase 2, fresh: awaits the shared rebuild when the snapshot was
-            // stale, then re-renders with live statuses.
-            val all = catalog.all()
-            if (all == null) {
-                if (_regions.value.isEmpty()) _errorRes.value = R.string.search_failed
-                return
+            // Stale results beat an error screen; the error only shows when
+            // there is nothing to show at all — a failed national lookup next
+            // to VBB results (or the other way round) is silent.
+            if (_regions.value.isEmpty() && (localFailed || nationalFailed)) {
+                _errorRes.value = R.string.search_failed
             }
-            _regions.value = grouped(trimmed, all)
         } finally {
             _isLoading.value = false
         }
     }
 
     // Matching + grouping walk the full catalog (~2550 records) — off the
-    // main thread, it runs once per debounced keystroke.
+    // main thread, it runs once per debounced keystroke. The national matches
+    // join minus the DB records the local catalog already shows
+    // (AufzugsstatusClient.excludingKnown).
     private suspend fun grouped(
         query: String,
-        catalog: List<AccessibilityCloudClient.Equipment>,
+        catalog: List<AccessibilityCloudClient.Equipment>?,
+        national: List<AccessibilityCloudClient.Equipment>? = null,
     ): List<RegionGroup> = withContext(Dispatchers.Default) {
-        SearchGrouping.group(AccessibilityCloudClient.matchStations(query, catalog))
+        val local = catalog?.let { AccessibilityCloudClient.matchStations(query, it) }.orEmpty()
+        val beyond = AufzugsstatusClient.excludingKnown(
+            national.orEmpty(),
+            AufzugsstatusClient.knownInventoryNumbers(catalog.orEmpty()),
+        )
+        SearchGrouping.group(local + beyond)
     }
 
     companion object {

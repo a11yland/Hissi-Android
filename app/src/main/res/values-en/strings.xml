@@ -44,11 +44,11 @@
     <string name="about_open">About Hissi</string>
     <string name="about_version">Version %1$s</string>
     <string name="about_data_title">Data</string>
-    <string name="about_data_detail">Elevator data comes from accessibility.cloud, a project by the non-profit Sozialhelden e.V.</string>
-    <string name="about_tagline">Elevator status for Berlin and Brandenburg</string>
+    <string name="about_data_detail">Elevator data for Berlin and Brandenburg comes from accessibility.cloud, a project by the non-profit Sozialhelden e.V. Stations in the rest of Germany come from the Aufzugsstatus API by plötzlich querschnitt (DB InfraGO and other operators, CC BY 4.0).</string>
+    <string name="about_tagline">Elevator status for Berlin, Brandenburg and stations across Germany</string>
     <string name="about_features_title">Features</string>
     <string name="about_privacy_title">Privacy</string>
-    <string name="about_privacy_detail">Hissi needs no account and collects no data. Favorites stay on your device; your location never leaves the device.</string>
+    <string name="about_privacy_detail">Hissi needs no account and collects no data. Favorites stay on your device. Your exact location never leaves the device; only when no VBB station is within walking distance does the app ask the nationwide service, with a position rounded to about one kilometre.</string>
     <string name="about_version_label">Version</string>
     <string name="shortcut_nearby_short">Nearby</string>
     <string name="shortcut_nearby_long">Show nearby stations</string>
@@ -124,7 +124,8 @@
 
     <string name="welcome_title">Welcome to Hissi</string>
     <string name="welcome_search_title">Find stations</string>
-    <string name="welcome_search_detail">All elevators of a station, with live status.</string>
+    <string name="welcome_search_detail">All elevators of a station, with live status – in Berlin, Brandenburg and at stations across Germany.</string>
+    <string name="region_national">Nationwide</string>
     <string name="welcome_favorites_title">Favorites</string>
     <string name="welcome_favorites_detail">Your elevators, all at a glance.</string>
     <string name="welcome_nearby_title">Nearby</string>

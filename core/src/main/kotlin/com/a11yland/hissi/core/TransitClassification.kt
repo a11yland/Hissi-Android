@@ -6,15 +6,21 @@ package com.a11yland.hissi.core
 // Berlin vs Brandenburg. accessibility.cloud's originalPlaceInfoId carries the
 // AGS ("de:11000:…" = Berlin, "de:12xxx:…" = a Brandenburg district); records
 // without one (BVG puts the station name there) fall back to the seed's
-// region, then to the name heuristic.
+// region, then to the name heuristic. National is everything beyond the VBB —
+// the records the Aufzugsstatus API supplies (AufzugsstatusClient), always
+// stamped explicitly, never inferred. Declared in display order.
 enum class TransitRegion(val rawValue: String) {
     Berlin("berlin"),
-    Brandenburg("brandenburg");
+    Brandenburg("brandenburg"),
+    National("national");
 
+    // German literals double as the localization keys, as on iOS; the UI
+    // maps National onto a string resource.
     val label: String
         get() = when (this) {
             Berlin -> "Berlin"
             Brandenburg -> "Brandenburg"
+            National -> "Deutschlandweit"
         }
 
     companion object {

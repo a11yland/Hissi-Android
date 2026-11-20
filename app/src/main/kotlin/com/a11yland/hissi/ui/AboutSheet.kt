@@ -44,17 +44,20 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.a11yland.hissi.R
 
-// The two organisations the data attribution points to — one place for the
-// URLs, used by the footer and the about sheet.
+// The sources the data attribution points to — one place for the URLs.
+// accessibility.cloud's terms ask for the attribution, the Aufzugsstatus API's
+// CC BY 4.0 licence requires it.
 object AttributionLinks {
     const val ACCESSIBILITY_CLOUD = "https://transit.accessibility.cloud"
     const val SOZIALHELDEN = "https://sozialhelden.de"
+    const val AUFZUGSSTATUS = "https://aufzuege.ploetzlich-querschnitt.de/api/"
 }
 
 // "Über Hissi", behind the app bar logo — the Android counterpart of the iOS
 // AboutSheet, a reference screen in sections: header (icon, name, tagline),
 // the feature rows the welcome sheet draws from, the data attribution
-// (required by accessibility.cloud's terms, see AttributionFooter) as link
+// (required by accessibility.cloud's terms and the Aufzugsstatus API's CC BY
+// 4.0 licence) as link
 // rows, a privacy note and the version.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -119,6 +122,8 @@ fun AboutSheet(onDismiss: () -> Unit) {
                 LinkRow("accessibility.cloud") { uriHandler.openUri(AttributionLinks.ACCESSIBILITY_CLOUD) }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 LinkRow("Sozialhelden e.V.") { uriHandler.openUri(AttributionLinks.SOZIALHELDEN) }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                LinkRow("Aufzugsstatus-API") { uriHandler.openUri(AttributionLinks.AUFZUGSSTATUS) }
             }
 
             Section(stringResource(R.string.about_privacy_title)) {

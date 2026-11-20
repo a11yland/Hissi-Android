@@ -46,11 +46,11 @@
     <string name="about_open">Über Hissi</string>
     <string name="about_version">Version %1$s</string>
     <string name="about_data_title">Daten</string>
-    <string name="about_data_detail">Die Aufzugsdaten stammen von accessibility.cloud, einem Projekt des gemeinnützigen Sozialhelden e.V.</string>
-    <string name="about_tagline">Aufzugstatus für Berlin und Brandenburg</string>
+    <string name="about_data_detail">Die Aufzugsdaten für Berlin und Brandenburg stammen von accessibility.cloud, einem Projekt des gemeinnützigen Sozialhelden e.V. Bahnhöfe im übrigen Deutschland liefert die Aufzugsstatus-API von plötzlich querschnitt (DB InfraGO und weitere Betreiber, CC BY 4.0).</string>
+    <string name="about_tagline">Aufzugstatus für Berlin, Brandenburg und Bahnhöfe deutschlandweit</string>
     <string name="about_features_title">Funktionen</string>
     <string name="about_privacy_title">Datenschutz</string>
-    <string name="about_privacy_detail">Hissi braucht kein Konto und sammelt keine Daten. Favoriten liegen auf deinem Gerät, dein Standort verlässt das Gerät nicht.</string>
+    <string name="about_privacy_detail">Hissi braucht kein Konto und sammelt keine Daten. Favoriten liegen auf deinem Gerät. Dein genauer Standort verlässt das Gerät nicht; nur wenn in Fußweite keine VBB-Station liegt, fragt die App den bundesweiten Dienst mit einer auf etwa einen Kilometer vergröberten Position.</string>
     <string name="about_version_label">Version</string>
     <string name="shortcut_nearby_short">In der Nähe</string>
     <string name="shortcut_nearby_long">Stationen in der Nähe anzeigen</string>
@@ -126,7 +126,9 @@
 
     <string name="welcome_title">Willkommen bei Hissi</string>
     <string name="welcome_search_title">Stationen finden</string>
-    <string name="welcome_search_detail">Alle Aufzüge einer Station mit Live-Status.</string>
+    <string name="welcome_search_detail">Alle Aufzüge einer Station mit Live-Status – in Berlin, Brandenburg und an Bahnhöfen deutschlandweit.</string>
+    <!-- Search results: the header of the region beyond the VBB (Berlin and Brandenburg are proper nouns and stay as they are). -->
+    <string name="region_national">Deutschlandweit</string>
     <string name="welcome_favorites_title">Favoriten</string>
     <string name="welcome_favorites_detail">Deine Aufzüge, alle auf einen Blick.</string>
     <string name="welcome_nearby_title">In der Nähe</string>

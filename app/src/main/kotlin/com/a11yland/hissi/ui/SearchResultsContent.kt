@@ -35,8 +35,10 @@ import androidx.compose.ui.unit.dp
 import com.a11yland.hissi.R
 import com.a11yland.hissi.core.SearchHighlight
 import com.a11yland.hissi.core.TransitNetwork
+import com.a11yland.hissi.core.TransitRegion
 
-// Grouped search results: Berlin/Brandenburg headers (only when both are
+// Grouped search results: region headers — Berlin, Brandenburg, Deutschlandweit
+// (the stations beyond the VBB, from the Aufzugsstatus API) — (only when more than one is
 // present), stations, network subheaders inside stations that span several
 // networks (S+U), and an inline favorite toggle per elevator — the Android
 // counterpart of the iOS SearchResultsList.
@@ -88,7 +90,7 @@ fun SearchResultsContent(
                 if (regions.size > 1) {
                     item(key = "region-${regionGroup.id}") {
                         Text(
-                            regionGroup.region.label,
+                            regionLabel(regionGroup.region),
                             style = MaterialTheme.typography.titleLarge,
                             modifier = Modifier
                                 .padding(start = 16.dp, top = 16.dp, bottom = 4.dp)
@@ -245,4 +247,12 @@ private fun NetworkBadge(network: TransitNetwork) {
             // Decorative — the enclosing header speaks the network names.
             .clearAndSetSemantics { },
     )
+}
+
+// Berlin and Brandenburg are proper nouns; the third region is a word and
+// localizes like every other UI string.
+@Composable
+private fun regionLabel(region: TransitRegion): String = when (region) {
+    TransitRegion.National -> stringResource(R.string.region_national)
+    else -> region.label
 }

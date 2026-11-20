@@ -1,7 +1,7 @@
 # Hissi-Android
 
 Android app of Hissi: monitors user-selected elevators via the
-[transit.accessibility.cloud](https://transit.accessibility.cloud) API and shows
+[transit.accessibility.cloud](https://transit.accessibility.cloud) API (Berlin and Brandenburg) and the [Aufzugsstatus API](https://aufzuege.ploetzlich-querschnitt.de/api/) (DB and city-operator stations across Germany) and shows
 their live status — favorites, search, nearby stations, disruption alerts and a
 home-screen widget. Kotlin + Jetpack Compose; `:core` is a pure JVM module with
 the platform-free logic, hand-ported from the iOS app's `Shared/`

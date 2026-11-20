@@ -81,6 +81,21 @@ the catalog before bumping anything.
   `app/src/main/assets/seed-catalog.json` is the bundled seed, generated in
   Hissi-iOS and copied per release. Refresh cadence is 30 minutes
   (`RefreshInterval`).
+- **Second source, beyond the VBB:** the Aufzugsstatus API
+  (aufzuege.ploetzlich-querschnitt.de, plötzlich querschnitt — DB InfraGO
+  FaSta nationwide plus HVV, KVB, MVG, VAG; no key, CC BY 4.0, named in the
+  about sheet). `AufzugsstatusClient` (pure: parsing, mapping, the 15-minute
+  freshness rule, `isNationalId`, `excludingKnown`) and `AufzugsstatusApi`
+  (Ktor: `searchLifts`, per-id `fetchLifts`, `nearbyEquipment`/`nearbyStations`)
+  are ported from `Shared/AufzugsstatusClient.swift`; `StatusSources.resolve`
+  routes ids by namespace (`"fasta:…"` vs numeric) for every status lookup
+  (`FavoritesRefresher.sources`). `SearchViewModel` runs the national lookup
+  side by side with phase 2 and drops the DB records the local catalog
+  already shows; nearby (section and widget) asks the API only when the
+  catalog has no station in walking distance, with the coordinate coarsened
+  to about a kilometre. Region `TransitRegion.National` renders as
+  `R.string.region_national`. The iOS CLAUDE.md ("Second source") has the
+  full rules; keep both in step.
 - Platform-free logic goes into `:core` with a test; `:app` only maps it onto
   Android (string resources, Compose, Glance).
 

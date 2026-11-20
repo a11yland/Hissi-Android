@@ -103,7 +103,16 @@ class NearbyWidget : GlanceAppWidget() {
                 live = emptyList(), seed = container.seed(), stations = container.seedStations(),
             )
         val stations = NearbyStations.nearest(fix.first, fix.second, records, limit = MAX_ROWS)
-        if (stations.isEmpty()) return NearbyWidgetState.Located(emptyList())
+        // Beyond the VBB the catalog knows no station: the Aufzugsstatus API
+        // answers instead (live statuses included), asked only then and only
+        // with a coordinate coarsened to about a kilometre — the app's nearby
+        // block does the same.
+        if (stations.isEmpty()) {
+            val national = runCatching {
+                container.aufzugsstatus.nearbyStations(fix.first, fix.second, limit = MAX_ROWS)
+            }.getOrNull()
+            return NearbyWidgetState.Located(national.orEmpty())
+        }
         // Phase 2: live statuses for exactly these rows — free while the
         // catalog cache is fresh, one request otherwise. What it doesn't
         // answer keeps its snapshot status.

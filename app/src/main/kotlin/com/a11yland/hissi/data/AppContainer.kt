@@ -3,6 +3,7 @@ package com.a11yland.hissi.data
 import android.content.Context
 import androidx.glance.appwidget.updateAll
 import com.a11yland.hissi.BuildConfig
+import com.a11yland.hissi.core.AufzugsstatusApi
 import com.a11yland.hissi.core.CatalogCache
 import com.a11yland.hissi.core.PageCountStore
 import com.a11yland.hissi.core.SeedCatalog
@@ -35,6 +36,18 @@ class AppContainer(private val context: Context) {
             // Mirrors the iOS behavior: requests carry the app's resolved
             // language (per-app locale included — it changes the default).
             appLocalization = { Locale.getDefault().toLanguageTag() },
+            logger = { android.util.Log.w("HissiApi", it) },
+        )
+    }
+
+    // The second status source, for everything beyond the VBB (see
+    // AufzugsstatusClient): nationwide search, national favorites, nearby
+    // stations where the catalog knows none. Key-less; fair use asks for a
+    // descriptive User-Agent.
+    val aufzugsstatus: AufzugsstatusApi by lazy {
+        AufzugsstatusApi(
+            engine = OkHttp.create(),
+            userAgent = "Hissi-Android/${BuildConfig.VERSION_NAME} (hissi.app)",
             logger = { android.util.Log.w("HissiApi", it) },
         )
     }

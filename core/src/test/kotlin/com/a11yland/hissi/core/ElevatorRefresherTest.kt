@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.runTest
 // pre-migration ids; the pure migrateIds counterpart is in FavoritesOpsTest.)
 class ElevatorRefresherTest {
     private val equipmentRequests = mutableListOf<Set<String>>()
+    private val nationalRequests = mutableListOf<Set<String>>()
 
     private fun favorite(id: String, stationId: String = "1") = MonitoredElevator(
         id = id, stationId = stationId, elevatorId = id,
@@ -21,10 +22,15 @@ class ElevatorRefresherTest {
 
     private fun sources(
         equipment: Map<String, AccessibilityCloudClient.Equipment> = emptyMap(),
+        national: Map<String, AccessibilityCloudClient.Equipment> = emptyMap(),
     ) = StatusSources(
         equipment = { ids ->
             equipmentRequests.add(ids)
             equipment
+        },
+        national = { ids ->
+            nationalRequests.add(ids)
+            national
         },
     )
 
@@ -49,6 +55,43 @@ class ElevatorRefresherTest {
         assertTrue(failed.isEmpty())
         // One batch covering both ids — never one request per favorite.
         assertEquals(listOf(setOf("101", "102")), equipmentRequests)
+        // Nothing beyond the VBB to ask for: the national API is not called.
+        assertTrue(nationalRequests.isEmpty())
+    }
+
+    // Favorites split by id namespace: numeric ids go to the catalog batch,
+    // "source:…" ids to the Aufzugsstatus API — each source asked once, and
+    // the answers land on the right favorites in the original order.
+    @Test
+    fun routesNationalIdsToTheNationalSource() = runTest {
+        val (updated, failed) = ElevatorRefresher.refreshAll(
+            listOf(favorite(id = "101"), favorite(id = "fasta:10804843"), favorite(id = "hvv:Master:11950-E")),
+            sources = sources(
+                equipment = mapOf("101" to equipment(id = "101", isWorking = true)),
+                national = mapOf(
+                    "fasta:10804843" to equipment(id = "fasta:10804843", isWorking = false),
+                    "hvv:Master:11950-E" to equipment(id = "hvv:Master:11950-E", isWorking = null),
+                ),
+            ),
+        )
+        assertContentEquals(listOf("101", "fasta:10804843", "hvv:Master:11950-E"), updated.map { it.id })
+        assertContentEquals(listOf(true, false, null), updated.map { it.isWorking })
+        assertTrue(failed.isEmpty())
+        assertEquals(listOf(setOf("101")), equipmentRequests)
+        assertEquals(listOf(setOf("fasta:10804843", "hvv:Master:11950-E")), nationalRequests)
+    }
+
+    @Test
+    fun nationalOnlyFavoritesSkipTheCatalog() = runTest {
+        val (updated, failed) = ElevatorRefresher.refreshAll(
+            listOf(favorite(id = "kvb:034-01")),
+            sources = sources(),
+        )
+        // Unanswered: previous values survive, the id is reported.
+        assertContentEquals(listOf(true), updated.map { it.isWorking })
+        assertEquals(setOf("kvb:034-01"), failed)
+        assertTrue(equipmentRequests.isEmpty())
+        assertEquals(listOf(setOf("kvb:034-01")), nationalRequests)
     }
 
     @Test
