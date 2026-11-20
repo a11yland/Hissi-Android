@@ -1,7 +1,7 @@
 name: Seed sync
 
-# The seed catalog and the :core test fixtures are generated in Hissi-iOS and
-# copied here (README "Shared with the iOS app"). This keeps the copies
+# The seed catalog, the national station list and the :core test fixtures are
+# generated in Hissi-iOS and copied here (README "Shared with the iOS app"). This keeps the copies
 # honest: it compares them against Hissi-iOS main and
 #   - on a push or pull request touching them, warns (Hissi-iOS updates
 #     first, so a short gap is normal and must not turn unrelated CI red),
@@ -25,11 +25,13 @@ on:
     branches: [main]
     paths:
       - "app/src/main/assets/seed-catalog.json"
+      - "app/src/main/assets/national-stations.json"
       - "core/src/test/fixtures/**"
       - ".github/workflows/seed-sync.yml"
   pull_request:
     paths:
       - "app/src/main/assets/seed-catalog.json"
+      - "app/src/main/assets/national-stations.json"
       - "core/src/test/fixtures/**"
       - ".github/workflows/seed-sync.yml"
 
@@ -44,8 +46,10 @@ concurrency:
 
 env:
   SEED: app/src/main/assets/seed-catalog.json
+  NATIONAL: app/src/main/assets/national-stations.json
   FIXTURES: core/src/test/fixtures
   IOS_SEED: ios/Shared/Resources/seed-catalog.json
+  IOS_NATIONAL: ios/Shared/Resources/national-stations.json
   IOS_FIXTURES: ios/HissiTests/Tests/Fixtures
 
 jobs:
@@ -62,6 +66,7 @@ jobs:
           path: ios
           sparse-checkout: |
             Shared/Resources/seed-catalog.json
+            Shared/Resources/national-stations.json
             HissiTests/Tests/Fixtures/
           sparse-checkout-cone-mode: false
 
@@ -82,6 +87,13 @@ jobs:
               echo "  - here: $(summary "$SEED")"
               echo "  - Hissi-iOS: $(summary "$IOS_SEED")"
             fi
+            if ! cmp -s "$NATIONAL" "$IOS_NATIONAL"; then
+              drift=1
+              national() { jq -r '"generatedAt \(.generatedAt), \(.stations | length) stations"' "$1" 2>/dev/null || echo "missing"; }
+              echo "- **National station list**"
+              echo "  - here: $(national "$NATIONAL")"
+              echo "  - Hissi-iOS: $(national "$IOS_NATIONAL")"
+            fi
             if ! fixtures=$(diff -rq "$FIXTURES" "$IOS_FIXTURES"); then
               drift=1
               echo "- **Test fixtures**"
@@ -93,7 +105,7 @@ jobs:
 
       - name: Warn
         if: steps.compare.outputs.drift == '1' && (github.event_name == 'push' || github.event_name == 'pull_request')
-        run: echo "::warning::Seed catalog or test fixtures differ from Hissi-iOS main — the daily run opens a sync PR."
+        run: echo "::warning::Seed catalog, national station list or test fixtures differ from Hissi-iOS main — the daily run opens a sync PR."
 
       - name: Open or update sync PR
         if: steps.compare.outputs.drift == '1' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
@@ -112,6 +124,8 @@ jobs:
           # deletion (sha null) for every fixture iOS no longer has.
           entries=$(jq -n --arg path "$SEED" --arg sha "$(blob "$IOS_SEED")" \
             '[{path: $path, mode: "100644", type: "blob", sha: $sha}]')
+          entries=$(jq --arg path "$NATIONAL" --arg sha "$(blob "$IOS_NATIONAL")" \
+            '. + [{path: $path, mode: "100644", type: "blob", sha: $sha}]' <<<"$entries")
           for f in "$IOS_FIXTURES"/*; do
             entries=$(jq --arg path "$FIXTURES/$(basename "$f")" --arg sha "$(blob "$f")" \
               '. + [{path: $path, mode: "100644", type: "blob", sha: $sha}]' <<<"$entries")

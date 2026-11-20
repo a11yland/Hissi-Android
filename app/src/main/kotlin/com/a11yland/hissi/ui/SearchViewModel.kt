@@ -104,21 +104,21 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
 
     // On-device distance sort over the catalog snapshot (seed-backfilled
     // coordinates); the seed carries the sort when no snapshot exists yet.
-    // Beyond the VBB the catalog knows no station: then — and only then, so a
-    // Berlin position never reaches that server — the Aufzugsstatus API is
-    // asked, with a coordinate coarsened to about a kilometre. Its rows come
-    // with live statuses; the caller's phase 2 then has nothing to re-state.
+    // Beyond the VBB — no Berlin/Brandenburg station in reach — the
+    // Aufzugsstatus API adds the stations the catalog lacks (city operators),
+    // asked only then, so a Berlin position never reaches that server, and
+    // only with a coordinate coarsened to about a kilometre
+    // (AufzugsstatusApi.nearbyCatalog). Its records come with live statuses;
+    // the caller's phase 2 refreshes the catalog's.
     suspend fun nearbyStations(latitude: Double, longitude: Double): List<NearbyStations.Station> {
         val seed = container.seed()
         val stations = container.seedStations()
         val snapshot = container.catalog().snapshot()
-        val local = withContext(Dispatchers.Default) {
-            val catalog = snapshot
-                ?: EquipmentCatalog.overlaid(live = emptyList(), seed = seed, stations = stations)
-            NearbyStations.nearest(latitude, longitude, catalog)
+        val local = snapshot ?: withContext(Dispatchers.Default) {
+            EquipmentCatalog.overlaid(live = emptyList(), seed = seed, stations = stations)
         }
-        if (local.isNotEmpty()) return local
-        return container.aufzugsstatus.nearbyStations(latitude, longitude).orEmpty()
+        val catalog = container.aufzugsstatus.nearbyCatalog(latitude, longitude, local)
+        return withContext(Dispatchers.Default) { NearbyStations.nearest(latitude, longitude, catalog) }
     }
 
     // Phase 2 of the nearby suggestions: one targeted request over exactly the

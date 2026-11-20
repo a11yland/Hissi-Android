@@ -48,12 +48,17 @@ object EquipmentCatalog {
     // Whatever still has no coordinate after all that takes the station's
     // from the seed's `stations` list (keyed by the station number) — the
     // last resort for a station whose records carry no centroid upstream.
+    // Live records that still have no station name after all that are the
+    // nationwide DB elevators the platform carries without one: the bundled
+    // national station list names them by FaSta number (nationalNamed).
     fun overlaid(
         live: List<AccessibilityCloudClient.Equipment>,
         seed: List<SeedCatalog.Record>,
         stations: List<SeedCatalog.Station> = emptyList(),
+        national: List<NationalStations.Station> = emptyList(),
     ): List<AccessibilityCloudClient.Equipment> {
         val stationsById = firstWins(stations.map { it.stationId to it })
+        val nationalByLift = NationalStations.byLift(national)
         val seedByInventory = firstWins(
             seed.mapNotNull { record ->
                 record.fastaEquipmentNumber?.let { it.toString() to record }
@@ -70,7 +75,7 @@ object EquipmentCatalog {
         val matchedSeedIds = mutableSetOf<String>()
         val merged = live.map { equipment ->
             val record = equipment.inventoryId?.let(seedByInventory::get)
-                ?: return@map stationBackfilled(equipment, seedByStation)
+                ?: return@map nationalNamed(stationBackfilled(equipment, seedByStation), nationalByLift)
             matchedSeedIds.add(record.id)
             // Backfilled again on the way out: a matched seed record can
             // itself carry no coordinates (Waßmannsdorf), which its siblings
@@ -121,6 +126,32 @@ object EquipmentCatalog {
             )
         }
         return appended.map { stationCoordinated(it, stationsById) }
+    }
+
+    // Names a live record that has no station — a nationwide DB elevator the
+    // platform carries by inventory number only — from the bundled national
+    // station list: station name and number, the station's coordinate where
+    // the record has none, "DB FaSta"/"DB InfraGO" as source and operator
+    // (the API serves only feed ids), region National. Records that already
+    // carry a name (every VBB record) and numbers the list doesn't know are
+    // left as they are — such a record stays invisible rather than guessed.
+    fun nationalNamed(
+        equipment: AccessibilityCloudClient.Equipment,
+        nationalByLift: Map<String, NationalStations.Station>,
+    ): AccessibilityCloudClient.Equipment {
+        if (equipment.stationName.isNotEmpty()) return equipment
+        val number = equipment.inventoryId ?: equipment.fastaEquipmentNumber?.toString() ?: return equipment
+        val station = nationalByLift[number] ?: return equipment
+        return equipment.copy(
+            stationId = equipment.stationId.ifEmpty { station.stationNumber.toString() },
+            stationName = station.name,
+            sourceName = equipment.sourceName.ifEmpty { "DB FaSta" },
+            organizationName = equipment.organizationName.ifEmpty { "DB InfraGO" },
+            latitude = equipment.latitude ?: station.latitude,
+            longitude = equipment.longitude ?: station.longitude,
+            fastaEquipmentNumber = equipment.fastaEquipmentNumber ?: number.toIntOrNull(),
+            region = equipment.region ?: TransitRegion.National,
+        )
     }
 
     // The station's own coordinate for a record that has none — after the

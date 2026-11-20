@@ -56,6 +56,8 @@ the catalog before bumping anything.
   (colours as hex strings so tests can compute contrast). Tests in
   `core/src/test` run against JSON fixtures in `core/src/test/fixtures/`
   shared with the iOS tests; do not edit fixtures here without the iOS side.
+  `NationalStations` and the national station list asset follow the same
+  rule (generated in Hissi-iOS, copied here).
 - **`:app`** (`com.a11yland.hissi`, applicationId `com.a11yland.Hissi`):
   - `MainActivity`: maps the palette onto Material 3 light/dark colour
     schemes, session-only theme override, provides `LocalDarkTheme`.
@@ -91,11 +93,18 @@ the catalog before bumping anything.
   routes ids by namespace (`"fasta:…"` vs numeric) for every status lookup
   (`FavoritesRefresher.sources`). `SearchViewModel` runs the national lookup
   side by side with phase 2 and drops the DB records the local catalog
-  already shows; nearby (section and widget) asks the API only when the
-  catalog has no station in walking distance, with the coordinate coarsened
-  to about a kilometre. Region `TransitRegion.National` renders as
-  `R.string.region_national`. The iOS CLAUDE.md ("Second source") has the
-  full rules; keep both in step.
+  already shows; nearby (section and widget) asks the API only when no VBB
+  station is in walking distance (`AufzugsstatusClient.needsNationalLookup`,
+  `AufzugsstatusApi.nearbyCatalog`), with the coordinate coarsened to about
+  a kilometre. Region `TransitRegion.National` renders as
+  `R.string.region_national`. The **national station list**
+  (`app/src/main/assets/national-stations.json`, generated in Hissi-iOS and
+  copied per release like the seed; `NationalStations` parses it,
+  `EquipmentCatalog.nationalNamed` names accessibility.cloud's nameless
+  nationwide DB records from it inside `overlaid`) makes DB stations across
+  Germany searchable offline and refreshable in the one catalog batch under
+  numeric ids. The iOS CLAUDE.md ("Second source") has the full rules; keep
+  both in step.
 - Platform-free logic goes into `:core` with a test; `:app` only maps it onto
   Android (string resources, Compose, Glance).
 

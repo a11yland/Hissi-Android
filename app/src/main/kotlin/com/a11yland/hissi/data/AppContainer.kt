@@ -5,6 +5,7 @@ import androidx.glance.appwidget.updateAll
 import com.a11yland.hissi.BuildConfig
 import com.a11yland.hissi.core.AufzugsstatusApi
 import com.a11yland.hissi.core.CatalogCache
+import com.a11yland.hissi.core.NationalStations
 import com.a11yland.hissi.core.PageCountStore
 import com.a11yland.hissi.core.SeedCatalog
 import com.a11yland.hissi.core.TransitApi
@@ -87,6 +88,7 @@ class AppContainer(private val context: Context) {
     // accessors instead of lazy properties.
     private var seedRecords: List<SeedCatalog.Record>? = null
     private var seedStationList: List<SeedCatalog.Station>? = null
+    private var nationalStationList: List<NationalStations.Station>? = null
     private var catalogCache: CatalogCache? = null
     private val catalogMutex = Mutex()
 
@@ -100,6 +102,19 @@ class AppContainer(private val context: Context) {
         }.also { seedStationList = it }
     }
 
+    // The DB stations across Germany (national-stations.json), naming the
+    // nameless DB records of the catalog.
+    suspend fun nationalStations(): List<NationalStations.Station> = catalogMutex.withLock {
+        loadNationalLocked()
+    }
+
+    private suspend fun loadNationalLocked(): List<NationalStations.Station> {
+        nationalStationList?.let { return it }
+        return withContext(Dispatchers.IO) {
+            readAsset("national-stations.json")?.let(NationalStations::parse).orEmpty()
+        }.also { nationalStationList = it }
+    }
+
     suspend fun catalog(): CatalogCache = catalogMutex.withLock {
         catalogCache?.let { return it }
         CatalogCache(
@@ -108,6 +123,7 @@ class AppContainer(private val context: Context) {
             stations = withContext(Dispatchers.IO) {
                 readSeedAsset()?.let(SeedCatalog::parseStations).orEmpty()
             }.also { seedStationList = it },
+            national = loadNationalLocked(),
             scope = appScope,
             fetchTargeted = api::fetchEquipment,
             buildLive = api::fetchCatalog,
@@ -123,7 +139,9 @@ class AppContainer(private val context: Context) {
         return parsed
     }
 
-    private fun readSeedAsset(): String? = runCatching {
-        context.assets.open("seed-catalog.json").bufferedReader().use { it.readText() }
+    private fun readSeedAsset(): String? = readAsset("seed-catalog.json")
+
+    private fun readAsset(name: String): String? = runCatching {
+        context.assets.open(name).bufferedReader().use { it.readText() }
     }.getOrNull()
 }

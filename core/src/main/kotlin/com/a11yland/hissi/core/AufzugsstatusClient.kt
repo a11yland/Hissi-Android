@@ -197,6 +197,23 @@ object AufzugsstatusClient {
     // The placeholder the API uses where a station has no name.
     fun isPlaceholderName(name: String): Boolean = placeholderPattern.matches(name)
 
+    // Whether a position needs the national API for its nearby list: only
+    // when no VBB station (a record from accessibility.cloud's Berlin/
+    // Brandenburg catalog — region Berlin, Brandenburg or unknown) lies within
+    // walking distance. The catalog also holds the DB stations across Germany
+    // (NationalStations), so "nothing local in reach" is no longer the test:
+    // in Hamburg the DB station is local, the HVV stations next to it are not.
+    fun needsNationalLookup(
+        latitude: Double,
+        longitude: Double,
+        catalog: List<AccessibilityCloudClient.Equipment>,
+        withinMeters: Double = NearbyStations.WALKING_RADIUS_METERS,
+    ): Boolean = NearbyStations.nearest(
+        latitude, longitude,
+        catalog.filter { it.region != TransitRegion.National },
+        limit = 1, withinMeters = withinMeters,
+    ).isEmpty()
+
     // Lifts answered for a nearby station, with the station's own coordinate
     // standing in for lifts that carry none (HVV, MVG), so the station is
     // placed and every lift counts. A name query is a substring match, so

@@ -56,6 +56,7 @@ jobs:
           path: ios
           sparse-checkout: |
             Shared/Resources/seed-catalog.json
+            Shared/Resources/national-stations.json
             HissiTests/Tests/Fixtures/
           sparse-checkout-cone-mode: false
 
@@ -64,6 +65,10 @@ jobs:
           status=0
           if ! cmp -s app/src/main/assets/seed-catalog.json ios/Shared/Resources/seed-catalog.json; then
             echo "::error::The seed catalog differs from Hissi-iOS main — merge the seed-sync PR first."
+            status=1
+          fi
+          if ! cmp -s app/src/main/assets/national-stations.json ios/Shared/Resources/national-stations.json; then
+            echo "::error::The national station list differs from Hissi-iOS main — merge the seed-sync PR first."
             status=1
           fi
           if ! diff -rq core/src/test/fixtures ios/HissiTests/Tests/Fixtures; then

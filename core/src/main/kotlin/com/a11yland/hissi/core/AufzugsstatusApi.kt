@@ -138,8 +138,26 @@ class AufzugsstatusApi(
         return AufzugsstatusClient.equipment(lifts.distinctBy { it.id })
     }
 
-    // Stations within walking distance according to the national API, as the
-    // nearby list's rows — live statuses included. null = lookup failed.
+    // The catalog to sort the nearby list from: the local one as it is while a
+    // VBB station is in reach, otherwise the local one plus whatever the
+    // national API adds — the city operators' stations and DB stations the
+    // bundled list doesn't know yet (records the catalog already shows are
+    // dropped). The API's records carry live statuses; the caller's status
+    // refresh answers numeric ids only and leaves them as they are. A failed
+    // lookup returns the local catalog unchanged.
+    suspend fun nearbyCatalog(
+        latitude: Double,
+        longitude: Double,
+        catalog: List<AccessibilityCloudClient.Equipment>,
+    ): List<AccessibilityCloudClient.Equipment> {
+        if (!AufzugsstatusClient.needsNationalLookup(latitude, longitude, catalog)) return catalog
+        val national = nearbyEquipment(latitude, longitude) ?: return catalog
+        return catalog + AufzugsstatusClient.excludingKnown(national, AufzugsstatusClient.knownInventoryNumbers(catalog))
+    }
+
+    // Stations within walking distance according to the national API alone,
+    // as the nearby list's rows — live statuses included. null = lookup
+    // failed. UIs go through nearbyCatalog.
     suspend fun nearbyStations(
         latitude: Double,
         longitude: Double,

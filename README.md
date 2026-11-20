@@ -31,6 +31,11 @@ the map.
 
 - `app/src/main/assets/seed-catalog.json` — the bundled seed catalog, generated
   in Hissi-iOS (`scripts/generate-seed-catalog.py`) and copied here per release.
+- `app/src/main/assets/national-stations.json` — the DB stations across Germany
+  with their FaSta elevator numbers, generated in Hissi-iOS
+  (`scripts/generate-national-stations.py` from the Aufzugsstatus API) and
+  copied here per release; it names accessibility.cloud's nameless nationwide
+  DB records.
 - `core/src/test/fixtures/` — the JSON fixtures the `:core` tests share with the
   iOS Swift package (`Hissi-iOS/HissiTests/Tests/Fixtures`), so behavioral drift
   between the two ports surfaces in CI.
