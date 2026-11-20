@@ -12,6 +12,7 @@ import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 
 // The network half of the Aufzugsstatus API client (the pure half is
 // AufzugsstatusClient), ported from the request section of
@@ -34,17 +35,30 @@ class AufzugsstatusApi(
         expectSuccess = false
     }
 
-    private suspend fun fetch(path: String, query: List<Pair<String, String>> = emptyList()): String? = try {
+    // One retry on 429 after the server's Retry-After (AufzugsstatusClient
+    // .retryDelaySeconds), every other failure is null right away.
+    private suspend fun fetch(
+        path: String,
+        query: List<Pair<String, String>> = emptyList(),
+        retrying: Boolean = true,
+    ): String? = try {
         val response = client.get("${AufzugsstatusClient.HOST}/$path") {
             for ((name, value) in query) parameter(name, value)
             header(HttpHeaders.UserAgent, userAgent)
             header(HttpHeaders.Accept, "application/json")
         }
-        if (response.status == HttpStatusCode.OK) {
-            response.bodyAsText()
-        } else {
-            logger("Aufzugsstatus $path: HTTP ${response.status.value}")
-            null
+        when {
+            response.status == HttpStatusCode.OK -> response.bodyAsText()
+            response.status == HttpStatusCode.TooManyRequests && retrying -> {
+                val seconds = AufzugsstatusClient.retryDelaySeconds(response.headers[HttpHeaders.RetryAfter])
+                logger("Aufzugsstatus $path: HTTP 429, retrying in $seconds s")
+                delay((seconds * 1000).toLong())
+                fetch(path, query, retrying = false)
+            }
+            else -> {
+                logger("Aufzugsstatus $path: HTTP ${response.status.value}")
+                null
+            }
         }
     } catch (e: Exception) {
         logger("Aufzugsstatus $path: ${e.message}")

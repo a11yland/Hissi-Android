@@ -97,6 +97,20 @@ class TransitNetworkTest {
                 stationModes = setOf(TransitNetwork.SBahn, TransitNetwork.Regional),
             ),
         )
+        // … unless DB marks the lift as an S-Bahn one itself — the national
+        // records (Hamburg Hbf) carry no station modes at all.
+        assertEquals(
+            TransitNetwork.SBahn,
+            TransitNetwork.classify(
+                description = "zu Gleis 1/2 (S-Bahn)", stationName = "Hamburg Hbf", sourceName = "DB FaSta",
+            ),
+        )
+        assertEquals(
+            TransitNetwork.Regional,
+            TransitNetwork.classify(
+                description = "zu Gleis 11/12 Abschnitt E", stationName = "Hamburg Hbf", sourceName = "DB FaSta",
+            ),
+        )
         // Unmarked elevator, no source: the station's single network wins.
         assertEquals(
             TransitNetwork.Regional,

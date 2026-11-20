@@ -93,6 +93,10 @@ enum class TransitNetwork {
             if (sourceName.contains("DB Regio")) return Regional   // VBB-Anlagen (DB Regio)
             if (sourceName == "DB FaSta") {
                 if (stationName.startsWith("S ") || stationModes == setOf(SBahn)) return SBahn
+                // DB marks its S-Bahn platform lifts in the description ("zu
+                // Gleis 1/2 (S-Bahn)") — at Hamburg Hbf as at Berlin Ostkreuz,
+                // where the station carries both networks and no "S " prefix.
+                if (description.contains("S-Bahn")) return SBahn
                 return Regional
             }
             // BVG / brokenlifts.

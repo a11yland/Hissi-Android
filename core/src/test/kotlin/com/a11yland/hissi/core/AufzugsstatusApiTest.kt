@@ -115,6 +115,43 @@ class AufzugsstatusApiTest {
         assertEquals(ElevatorStatus.Working, stations!!.first().status)
     }
 
+    // Rate limited once: one retry after Retry-After, then the answer; rate
+    // limited twice: given up like any other failure.
+    @Test
+    fun retriesOnceAfterATooManyRequests() = runTest {
+        var attempts = 0
+        val engine = MockEngine {
+            attempts++
+            if (attempts == 1) {
+                respond("", HttpStatusCode.TooManyRequests, headersOf(HttpHeaders.RetryAfter, "0"))
+            } else {
+                respond("[${lift("fasta:1", "fasta", "Hamburg Hbf")}]", headers = jsonHeaders)
+            }
+        }
+        assertContentEquals(listOf("fasta:1"), api(engine).searchLifts("Hamburg").orEmpty().map { it.id })
+        assertEquals(2, attempts)
+
+        var stubborn = 0
+        val limited = MockEngine {
+            stubborn++
+            respond("", HttpStatusCode.TooManyRequests, headersOf(HttpHeaders.RetryAfter, "0"))
+        }
+        assertNull(api(limited).searchLifts("Hamburg"))
+        assertEquals(2, stubborn)
+    }
+
+    @Test
+    fun retryDelayFollowsRetryAfterWithinTheCap() {
+        assertEquals(2.0, AufzugsstatusClient.retryDelaySeconds(null))
+        assertEquals(1.0, AufzugsstatusClient.retryDelaySeconds("1"))
+        assertEquals(3.0, AufzugsstatusClient.retryDelaySeconds(" 3 "))
+        assertEquals(5.0, AufzugsstatusClient.retryDelaySeconds("60"))
+        assertEquals(0.0, AufzugsstatusClient.retryDelaySeconds("0"))
+        assertEquals(0.0, AufzugsstatusClient.retryDelaySeconds("-4"))
+        // An HTTP-date Retry-After is not parsed: the default applies.
+        assertEquals(2.0, AufzugsstatusClient.retryDelaySeconds("Wed, 21 Oct 2026 07:28:00 GMT"))
+    }
+
     @Test
     fun nearbyFailureIsNullAndNoStationIsEmpty() = runTest {
         assertNull(api(MockEngine { respondError(HttpStatusCode.BadGateway) }).nearbyStations(53.55, 10.0))

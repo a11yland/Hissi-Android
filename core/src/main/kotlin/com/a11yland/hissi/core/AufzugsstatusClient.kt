@@ -55,6 +55,18 @@ object AufzugsstatusClient {
     const val NEARBY_REQUEST_RADIUS_KM = 2.0
     const val NEARBY_REQUEST_LIMIT = 20
 
+    // The soft rate limit is 60 requests/min per IP — and carrier NAT puts
+    // many phones behind one IP. A 429 is retried once after the server's
+    // Retry-After (capped: a WorkManager refresh has a tight budget), then
+    // given up like any other failure.
+    const val RETRY_AFTER_CAP_SECONDS = 5.0
+    const val DEFAULT_RETRY_AFTER_SECONDS = 2.0
+
+    fun retryDelaySeconds(retryAfterHeader: String?): Double {
+        val requested = retryAfterHeader?.trim()?.toDoubleOrNull()
+        return (requested ?: DEFAULT_RETRY_AFTER_SECONDS).coerceIn(0.0, RETRY_AFTER_CAP_SECONDS)
+    }
+
     private val idPattern = Regex("^[a-z][a-z0-9-]*:\\S+$")
     private val placeholderPattern = Regex("^Bahnhof \\d+$")
 
