@@ -104,8 +104,12 @@ jobs:
           api="repos/$GITHUB_REPOSITORY"
           branch=seed-sync
 
+          # --rawfile, not --arg: Linux caps a single argument at 128 KB,
+          # and the base64 seed is larger (~340 KB today, ~1.5 MB once the
+          # nationwide seed lands).
           blob() {
-            jq -n --arg content "$(base64 -w0 "$1")" '{content: $content, encoding: "base64"}' \
+            base64 -w0 "$1" > "$RUNNER_TEMP/blob.b64"
+            jq -n --rawfile content "$RUNNER_TEMP/blob.b64" '{content: $content, encoding: "base64"}' \
               | gh api "$api/git/blobs" --input - --jq .sha
           }
           # Tree entries: the seed, every iOS fixture (added or changed) and a
