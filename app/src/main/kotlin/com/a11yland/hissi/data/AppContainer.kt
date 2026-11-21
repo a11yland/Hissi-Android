@@ -3,7 +3,9 @@ package com.a11yland.hissi.data
 import android.content.Context
 import androidx.glance.appwidget.updateAll
 import com.a11yland.hissi.BuildConfig
+import com.a11yland.hissi.core.AccessibilityCloudClient
 import com.a11yland.hissi.core.CatalogCache
+import com.a11yland.hissi.core.DemoFixtures
 import com.a11yland.hissi.core.PageCountStore
 import com.a11yland.hissi.core.SeedCatalog
 import com.a11yland.hissi.core.TransitApi
@@ -99,9 +101,30 @@ class AppContainer(private val context: Context) {
                 readSeedAsset()?.let(SeedCatalog::parseLegacyIds).orEmpty()
             },
             scope = appScope,
-            fetchTargeted = api::fetchEquipment,
-            buildLive = api::fetchCatalog,
+            fetchTargeted = if (DemoMode.isActive) {
+                { ids -> demoCatalog().filter { it.id in ids } }
+            } else {
+                api::fetchEquipment
+            },
+            buildLive = if (DemoMode.isActive) {
+                { demoCatalog() }
+            } else {
+                api::fetchCatalog
+            },
         ).also { catalogCache = it }
+    }
+
+    // The screenshot catalog (DemoMode): the seed with fixed statuses, dates
+    // relative to the first access.
+    private var demo: List<AccessibilityCloudClient.Equipment>? = null
+
+    suspend fun demoCatalog(): List<AccessibilityCloudClient.Equipment> {
+        demo?.let { return it }
+        val seed = seedRecords ?: withContext(Dispatchers.IO) {
+            readSeedAsset()?.let(SeedCatalog::parse).orEmpty()
+        }
+        return DemoFixtures.catalog(seed, System.currentTimeMillis(), Locale.getDefault().language)
+            .also { demo = it }
     }
 
     private suspend fun loadSeedLocked(): List<SeedCatalog.Record> {

@@ -52,6 +52,11 @@ class FavoritesRepository(private val context: Context) {
     suspend fun add(elevator: MonitoredElevator): List<MonitoredElevator> =
         update { FavoritesOrdering.inserting(elevator, it, System.currentTimeMillis()) }
 
+    // Replaces the whole list as given — the screenshot tests' demo
+    // favorites (DemoFixtures), the iOS `-HissiDemoFavorites` counterpart.
+    suspend fun replaceAll(elevators: List<MonitoredElevator>): List<MonitoredElevator> =
+        update(order = FavoritesOrder.DEFAULT) { elevators }
+
     suspend fun remove(id: String): List<MonitoredElevator> =
         update { FavoritesOps.removed(it, id) }
 

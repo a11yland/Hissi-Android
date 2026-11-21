@@ -6,9 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Hissi for Android shows whether the elevators at Berlin and Brandenburg
 stations and at Deutsche Bahn stations across Germany work, for wheelchair
-users, parents with strollers and people with luggage. Users star elevators (favorites), search stations, see nearby
-stations, get disruption alerts and use two home-screen widgets. Kotlin +
-Jetpack Compose (Material 3), Glance widgets, WorkManager.
+users, parents with strollers and people with luggage. Users star elevators
+(favorites), search stations, see nearby stations, get disruption alerts and
+use two home-screen widgets. Kotlin + Jetpack Compose (Material 3), Glance
+widgets, WorkManager.
 
 It is the Android port of [Hissi-iOS](https://github.com/a11yland/Hissi-iOS),
 which is the baseline for requirements and architecture (see `docs/README.md`).
@@ -27,9 +28,21 @@ Requires a JDK 17+ (CI uses Temurin 21) and an Android SDK in
 ./gradlew :app:lintDebug               # Android lint (not run in CI)
 ./gradlew :app:installDebug            # install on a connected device/emulator
 ./gradlew :app:signingReport           # debug SHA-1 for the Maps key
+scripts/screenshots.sh [--lang de,en]  # Play screenshots on the running emulator
 ```
 
-There are no instrumented or Compose UI tests; `:app` has no test source set.
+`:app` has no unit tests; its only instrumented tests are the Play
+screenshots (`app/src/androidTest/…/ScreenshotTests.kt`, one test per motif —
+favorites dark, search, favorites light, welcome). They run in **demo mode**
+(`data/DemoMode.kt`, debug builds only, switched on by the tests: catalog and
+status requests answer from `DemoFixtures` in `:core` — the bundled seed with
+fixed statuses, the same picks as iOS — and the tests store the demo
+favorites and onboarding state before each launch). `scripts/screenshots.sh`
+installs app and tests, sets the SystemUI demo status bar (9:41), clears the
+app data and sets the per-app locale per language (Android 13+), runs them,
+pulls the shots and pillarboxes them to 1080 × 1920 on the app's ground into
+`play/screenshots/` (other languages into `play/screenshots/<lang>/`); shot
+on the Pixel 4 profile (1080 × 2280).
 
 `local.properties` (gitignored) holds machine-local secrets read by
 `app/build.gradle.kts`: `hissi.transitToken` (API Bearer token, becomes
@@ -121,6 +134,14 @@ the catalog before bumping anything.
   branch onto a phone. The APK carries the upload-key signature (Play
   re-signs with the app signing key), so a Play or debug installation has
   to go first. Play upload stays manual (`docs/android-distribution.md`).
+- `.github/workflows/screenshots.yml` ("Screenshots"): manual (inputs:
+  languages, default `de`; `open_pr`), runs `scripts/screenshots.sh` on an
+  API 34 Pixel 4 emulator (reactivecircus/android-emulator-runner, KVM),
+  uploads the shots as an artifact and, with `open_pr`, opens or rebuilds a
+  `screenshots-update` PR (label `screenshots`, commit via the GitHub API)
+  that replaces the shot sets in `play/screenshots/`. Pull requests touching
+  the script, the tests or the workflow run it for artifacts only.
+  Counterpart of the Hissi-iOS Screenshots workflow.
 - `.github/workflows/seed-sync.yml` ("Seed sync"): compares `app/src/main/assets/seed-catalog.json`
   and `core/src/test/fixtures/` with Hissi-iOS `main`. On a push or pull
   request touching them it only warns; daily and on a manual run it opens or rebuilds a `seed-sync` PR
