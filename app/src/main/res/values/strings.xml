@@ -47,7 +47,9 @@
     <string name="about_version">Version %1$s</string>
     <string name="about_data_title">Daten</string>
     <string name="about_data_detail">Die Aufzugsdaten stammen von accessibility.cloud, einem Projekt des gemeinnützigen Sozialhelden e.V.</string>
-    <string name="about_tagline">Aufzugstatus für Berlin und Brandenburg</string>
+    <string name="about_stations_detail">Stationsnamen und -orte stammen von DELFI e.V. über gtfs.de (CC BY 4.0) und von der VBB Verkehrsverbund Berlin-Brandenburg GmbH (CC BY).</string>
+    <string name="about_license_cc_by">Lizenz CC BY 4.0</string>
+    <string name="about_tagline">Aufzugstatus für Berlin, Brandenburg und Bahnhöfe der Deutschen Bahn</string>
     <string name="about_features_title">Funktionen</string>
     <string name="about_privacy_title">Datenschutz</string>
     <string name="about_privacy_detail">Hissi braucht kein Konto und sammelt keine Daten. Favoriten liegen auf deinem Gerät, dein Standort verlässt das Gerät nicht.</string>
@@ -70,6 +72,17 @@
     <string name="relative_on_date">am %1$s</string>
 
     <string name="network_regional">Regionalverkehr</string>
+    <!-- Federal states (search result headers); the others are spelled the same in both languages. -->
+    <string name="region_baden_wuerttemberg">Baden-Württemberg</string>
+    <string name="region_bayern">Bayern</string>
+    <string name="region_hessen">Hessen</string>
+    <string name="region_mecklenburg_vorpommern">Mecklenburg-Vorpommern</string>
+    <string name="region_niedersachsen">Niedersachsen</string>
+    <string name="region_nordrhein_westfalen">Nordrhein-Westfalen</string>
+    <string name="region_rheinland_pfalz">Rheinland-Pfalz</string>
+    <string name="region_sachsen">Sachsen</string>
+    <string name="region_sachsen_anhalt">Sachsen-Anhalt</string>
+    <string name="region_thueringen">Thüringen</string>
     <string name="network_access">Zugang</string>
     <string name="network_regional_spoken">Regionalbahn</string>
     <string name="appearance_light">Zu hellem Erscheinungsbild wechseln</string>
@@ -149,4 +162,6 @@
     <string name="whats_new_1_3_interface_detail">Störungsalarme hinter der Glocke, mehr Platz für deine Favoritenliste, ein größerer Knopf für Stationen in der Nähe und klarere Hinweise.</string>
     <string name="whats_new_1_3_accessibility_title">Besser zugänglich</string>
     <string name="whats_new_1_3_accessibility_detail">Höhere Kontraste, mehr Platz für große Schrift und bessere Unterstützung für TalkBack.</string>
+    <string name="whats_new_1_4_germany_title">DB-Aufzüge in ganz Deutschland</string>
+    <string name="whats_new_1_4_germany_detail">Hissi kennt jetzt auch die Aufzüge der Deutschen Bahn an Bahnhöfen außerhalb von Berlin und Brandenburg. Suchergebnisse sind nach Bundesland sortiert.</string>
 </resources>

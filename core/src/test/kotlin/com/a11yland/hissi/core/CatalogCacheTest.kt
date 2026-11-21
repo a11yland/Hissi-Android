@@ -50,11 +50,13 @@ private fun CoroutineScope.cache(
     file: File,
     ttl: Duration = Duration.ofMinutes(10),
     seed: List<SeedCatalog.Record> = emptyList(),
+    legacyIds: Map<String, String> = emptyMap(),
     fetchTargeted: suspend (List<String>) -> List<AccessibilityCloudClient.Equipment>? = { null },
 ) = CatalogCache(
     ttl = ttl,
     cacheFile = file,
     seed = seed,
+    legacyIds = legacyIds,
     scope = this,
     fetchTargeted = fetchTargeted,
     buildLive = { stub.next() },
@@ -137,29 +139,25 @@ class CatalogPersistenceTest {
     }
 }
 
-// The async half of the seed-favorite bridge: resolution through the cache.
+// The async half of the legacy-id bridge: resolution through the cache.
 class SeedFavoriteResolutionTest {
-    private fun seedRecord(id: String, number: Int?, source: String = "fasta") = SeedCatalog.Record(
-        id = id, source = source, acId = null, fastaEquipmentNumber = number,
-        stationNumber = null, brokenliftsStationId = null, brokenliftsIndex = null,
-        stationName = "S Teststadt", description = "Straße ⟷ Bahnsteig",
-        latitude = null, longitude = null, sourceName = "DB FaSta",
-        organizationName = "DB", region = "berlin",
+    private fun seedRecord(id: String) = SeedCatalog.Record(
+        id = id, stationId = "900000001", stationName = "Teststadt", region = "berlin",
+        description = "Straße ↔ Bahnsteig", sourceName = "DB FaSta", organizationName = "DB InfraGO",
     )
 
-    private fun liveEquipment(id: String, inventoryId: String? = null) =
-        AccessibilityCloudClient.Equipment(
-            id = id, inventoryId = inventoryId, stationId = "900000001",
-            stationName = "S Teststadt", description = "Straße ⟷ Bahnsteig",
-            isWorking = true,
-        )
+    private fun liveEquipment(id: String) = AccessibilityCloudClient.Equipment(
+        id = id, stationId = "900000001", stationName = "Teststadt",
+        description = "Straße ↔ Bahnsteig", isWorking = true,
+    )
 
     @Test
-    fun seedFavoriteResolvesToItsLiveRecordOnceACatalogExists() = runTest {
-        val stub = BuildStub(listOf(listOf(liveEquipment(id = "456", inventoryId = "42"))))
+    fun legacyFavoriteResolvesToItsLiveRecordOnceACatalogExists() = runTest {
+        val stub = BuildStub(listOf(listOf(liveEquipment(id = "456"))))
         val catalog = cache(
             stub, tempCacheFile(),
-            seed = listOf(seedRecord(id = "fasta-42", number = 42)),
+            seed = listOf(seedRecord(id = "456")),
+            legacyIds = mapOf("fasta-42" to "456"),
         )
 
         catalog.all()
@@ -168,33 +166,20 @@ class SeedFavoriteResolutionTest {
         assertEquals(true, resolved["fasta-42"]?.isWorking)
     }
 
+    // Created from a seed preview on first launch, before any catalog: the
+    // id is live already; the seed answers until the targeted fetch does.
     @Test
-    fun seedFavoriteWithoutAnyCatalogResolvesFromTheSeedUnknown() = runTest {
+    fun seedFavoriteWithoutAnyNetworkResolvesFromTheSeedUnknown() = runTest {
         val catalog = cache(
             BuildStub(listOf(null)), tempCacheFile(),
-            seed = listOf(seedRecord(id = "fasta-42", number = 42)),
+            seed = listOf(seedRecord(id = "456")),
+            legacyIds = mapOf("fasta-42" to "456"),
         )
 
-        val resolved = catalog.equipment(setOf("fasta-42"))
-        assertEquals("fasta-42", resolved["fasta-42"]?.id)
-        assertNull(resolved["fasta-42"]?.isWorking)
-    }
-
-    // An accessibilityCloud-source seed record next to live data is neither
-    // appended by the overlay nor bridged (numbers differ) — the favorite
-    // must still answer from the seed instead of failing every refresh.
-    @Test
-    fun unbridgedSeedFavoriteNextToLiveDataFallsBackToTheSeed() = runTest {
-        val stub = BuildStub(listOf(listOf(liveEquipment(id = "456", inventoryId = "99"))))
-        val catalog = cache(
-            stub, tempCacheFile(),
-            seed = listOf(seedRecord(id = "z87ZFWJs5aB2seuYf", number = 42, source = "accessibilityCloud")),
-        )
-
-        catalog.all()
-        val resolved = catalog.equipment(setOf("z87ZFWJs5aB2seuYf"))
-        assertEquals("z87ZFWJs5aB2seuYf", resolved["z87ZFWJs5aB2seuYf"]?.id)
-        assertNull(resolved["z87ZFWJs5aB2seuYf"]?.isWorking)
+        val resolved = catalog.equipment(setOf("fasta-42", "456"))
+        assertNull(resolved["456"]?.isWorking)
+        assertEquals("Teststadt", resolved["456"]?.stationName)
+        assertEquals("456", resolved["fasta-42"]?.id)
     }
 
     // No Swift counterpart (URLSession); here the targeted path is cheap to

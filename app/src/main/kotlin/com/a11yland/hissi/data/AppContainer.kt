@@ -95,6 +95,9 @@ class AppContainer(private val context: Context) {
             stations = withContext(Dispatchers.IO) {
                 readSeedAsset()?.let(SeedCatalog::parseStations).orEmpty()
             }.also { seedStationList = it },
+            legacyIds = withContext(Dispatchers.IO) {
+                readSeedAsset()?.let(SeedCatalog::parseLegacyIds).orEmpty()
+            },
             scope = appScope,
             fetchTargeted = api::fetchEquipment,
             buildLive = api::fetchCatalog,

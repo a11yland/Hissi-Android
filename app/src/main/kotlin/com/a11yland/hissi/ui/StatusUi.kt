@@ -18,6 +18,7 @@ import com.a11yland.hissi.core.MonitoredElevator
 import com.a11yland.hissi.core.Palette
 import com.a11yland.hissi.core.StatusIcon
 import com.a11yland.hissi.core.TransitNetwork
+import com.a11yland.hissi.core.TransitRegion
 import com.a11yland.hissi.core.WcagContrast
 import java.time.Instant
 import java.time.ZoneId
@@ -110,6 +111,23 @@ fun relativeTimeText(since: Instant): String {
 fun lastUpdatedText(elevator: MonitoredElevator): String =
     elevator.lastUpdated?.let { stringResource(R.string.as_of, relativeTimeText(it)) }
         ?: stringResource(R.string.as_of_unknown)
+
+// Federal state header in the search results; names spelled the same in
+// German and English stay literals, like the network names.
+@Composable
+fun regionLabel(region: TransitRegion): String = when (region) {
+    TransitRegion.BadenWuerttemberg -> stringResource(R.string.region_baden_wuerttemberg)
+    TransitRegion.Bayern -> stringResource(R.string.region_bayern)
+    TransitRegion.Hessen -> stringResource(R.string.region_hessen)
+    TransitRegion.MecklenburgVorpommern -> stringResource(R.string.region_mecklenburg_vorpommern)
+    TransitRegion.Niedersachsen -> stringResource(R.string.region_niedersachsen)
+    TransitRegion.NordrheinWestfalen -> stringResource(R.string.region_nordrhein_westfalen)
+    TransitRegion.RheinlandPfalz -> stringResource(R.string.region_rheinland_pfalz)
+    TransitRegion.Sachsen -> stringResource(R.string.region_sachsen)
+    TransitRegion.SachsenAnhalt -> stringResource(R.string.region_sachsen_anhalt)
+    TransitRegion.Thueringen -> stringResource(R.string.region_thueringen)
+    else -> region.label
+}
 
 @Composable
 fun networkLabel(network: TransitNetwork): String = when (network) {

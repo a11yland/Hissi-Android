@@ -27,6 +27,8 @@ class CatalogCache(
     private val cacheFile: File?,
     private val seed: List<SeedCatalog.Record> = emptyList(),
     private val stations: List<SeedCatalog.Station> = emptyList(),
+    // Format-1 seed ids → live ids (SeedCatalog.parseLegacyIds).
+    private val legacyIds: Map<String, String> = emptyMap(),
     // Builds run on this scope so a cancelled caller (every search keystroke
     // cancels its predecessor) does not abort the shared build.
     private val scope: CoroutineScope,
@@ -52,10 +54,9 @@ class CatalogCache(
     // persisted catalog of any age, null when neither exists (first launch).
     // When the snapshot is stale the shared rebuild is kicked off in the
     // background; callers show the stale names/statuses now and re-render off
-    // all() when the build lands. Deliberately never falls back to the seed:
-    // seed records carry pre-migration ids, and a favorite created from one
-    // would never resolve live (offline search via all() stays the only path
-    // to that).
+    // all() when the build lands. Never falls back to the seed itself — the
+    // callers that want a preview (search, nearby) overlay the seed on their
+    // own.
     //
     // `rebuildingIfStale = false` is the widgets' read-only variant (the iOS
     // `snapshot(rebuildingIfStale:)`): a widget renders whatever the app
@@ -90,30 +91,26 @@ class CatalogCache(
     // Resolves favorites in one batch, keyed by the requested id. A
     // still-fresh catalog cache answers for free; otherwise one targeted
     // request covers all numeric ids — the full catalog build stays
-    // search-only. Non-numeric ids are seed-record favorites: when any cached
-    // catalog knows their live counterpart they bridge to it via the operator
-    // inventory number — the caller sees the live record, adopts its id
-    // (StatusMerge) and the favorite refreshes directly from then on.
-    // Unbridged seed ids resolve from the bundled seed with unknown status.
-    // Ids missing from the result keep their previous values upstream.
+    // search-only. Non-numeric ids are favorites created from a format-1
+    // seed preview: they bridge to their live id via the seed's legacyIds —
+    // the caller sees the live record, adopts its id (StatusMerge) and the
+    // favorite refreshes directly from then on. Ids missing from the result
+    // keep their previous values upstream.
     suspend fun equipment(ids: Set<String>): Map<String, AccessibilityCloudClient.Equipment> {
         if (ids.isEmpty()) return emptyMap()
         val (snapshot, fresh) = mutex.withLock {
             loadDiskIfNeeded()
             cached to (fetchedAt?.let { Duration.between(it, Instant.now()) < ttl } ?: false)
         }
-        // The id mapping is stable, so any cached catalog answers it — only
-        // the status has to be fresh, and that is fetched below.
-        val bridged = EquipmentCatalog.bridgedLiveIds(ids, seed, snapshot)
+        val bridged = EquipmentCatalog.bridgedLiveIds(ids, legacyIds)
         val resolved: List<AccessibilityCloudClient.Equipment>
         if (snapshot.isNotEmpty() && fresh) {
             resolved = snapshot
         } else {
             val numeric = (ids.filter { it.toLongOrNull() != null } + bridged.values).distinct().sorted()
             val live = if (numeric.isEmpty()) emptyList() else fetchTargeted(numeric)
-            // A failed fetch degrades to the seed overlay: numeric favorites
-            // stay unresolved (previous values survive), seed-id favorites
-            // still answer — status unknown, never a false "working".
+            // A failed fetch degrades to the seed: every favorite the seed
+            // knows still answers — status unknown, never a false "working".
             resolved = EquipmentCatalog.overlaid(live = live.orEmpty(), seed = seed, stations = stations)
         }
         val byId = LinkedHashMap<String, AccessibilityCloudClient.Equipment>(resolved.size)
@@ -122,19 +119,6 @@ class CatalogCache(
         for (id in ids) {
             val hit = bridged[id]?.let(byId::get) ?: byId[id]
             if (hit != null) result[id] = hit
-        }
-        // Last resort for seed ids the overlay didn't answer (e.g. an
-        // accessibilityCloud-source seed record next to live data, unbridged
-        // because no catalog build ever landed): resolve from the bundled
-        // seed directly — status unknown, and no spurious failure report.
-        val missingSeedIds = ids.filter { result[it] == null && it.toLongOrNull() == null }
-        if (missingSeedIds.isNotEmpty()) {
-            val fallback = EquipmentCatalog.overlaid(
-                live = emptyList(),
-                stations = stations,
-                seed = seed.filter { it.id in missingSeedIds },
-            )
-            for (record in fallback) result[record.id] = record
         }
         return result
     }
