@@ -51,7 +51,7 @@ the catalog before bumping anything.
   network and pagination, `AccessibilityCloudClient` for pure parsing and
   joins), catalog handling (`CatalogCache`, `EquipmentCatalog`, `SeedCatalog`,
   `StatusMerge`), search (`SearchGrouping`, `SearchHighlight`,
-  `TransitClassification`), `NearbyStations`, `DisruptionAlert` transition
+  `StationAliases` — Hbf/Hauptbahnhof —, `TransitClassification`), `NearbyStations`, `DisruptionAlert` transition
   rules, `FavoritesOrdering`, `WelcomeGate`, and `Palette` + `WcagContrast`
   (colours as hex strings so tests can compute contrast). Tests in
   `core/src/test` run against JSON fixtures in `core/src/test/fixtures/`

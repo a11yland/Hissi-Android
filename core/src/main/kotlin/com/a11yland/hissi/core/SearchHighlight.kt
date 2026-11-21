@@ -6,12 +6,19 @@ import java.text.Normalizer
 // AttributedString, Android an AnnotatedString — both need the matched range
 // first): the first case- and diacritic-insensitive occurrence of the query,
 // as indices into the *original* spelling ("schonhauser" highlights
-// "Schönhauser"). Null when no contiguous match exists or the query is blank.
+// "Schönhauser"), aliases included. Null when no contiguous match exists or
+// the query is blank.
 object SearchHighlight {
+    // The query as typed first, then its alias spellings ("Hauptbahnhof"
+    // highlights the "Hbf" of "München Hbf").
     fun range(name: String, query: String): IntRange? {
         val trimmed = query.trim()
         if (trimmed.isEmpty()) return null
+        return (listOf(trimmed) + StationAliases.variants(trimmed))
+            .firstNotNullOfOrNull { exactRange(name, it) }
+    }
 
+    private fun exactRange(name: String, trimmed: String): IntRange? {
         // Fold per character and remember which original index each folded
         // character came from, so the match maps back to original indices.
         val folded = StringBuilder()

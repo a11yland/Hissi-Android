@@ -321,10 +321,19 @@ object AccessibilityCloudClient {
 
     // MARK: Search (pure name filter, shared by both search phases)
 
+    // A name matches when it contains the query as typed or once station
+    // abbreviations are spelled out on both sides (StationAliases:
+    // "Hauptbahnhof" finds "München Hbf", "Hbf" finds "Berlin
+    // Hauptbahnhof") — the first keeps every partial match while typing
+    // ("hb…"), the second bridges the spellings.
     fun matchStations(query: String, catalog: List<Equipment>): List<Equipment> {
         val needle = normalize(query)
         if (needle.isEmpty()) return emptyList()
-        return catalog.filter { normalize(it.stationName).contains(needle) }
+        val expandedNeedle = StationAliases.expanded(needle)
+        return catalog.filter {
+            val name = normalize(it.stationName)
+            name.contains(needle) || StationAliases.expanded(name).contains(expandedNeedle)
+        }
     }
 
     // Case- and diacritic-insensitive folding ("schonhauser" matches
