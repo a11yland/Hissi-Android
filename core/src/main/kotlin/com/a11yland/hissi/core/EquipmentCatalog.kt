@@ -3,136 +3,101 @@ package com.a11yland.hissi.core
 import java.text.Normalizer
 
 // The pure parts of the equipment catalog: the seed overlay and the
-// seed-id → live-id bridge. Ported from `Shared/EquipmentCatalog.swift`; the
-// stateful cache (TTL, disk persistence, shared in-flight build) follows in
-// the app phase.
+// legacy-id → live-id bridge. Ported from `Shared/EquipmentCatalog.swift`;
+// the stateful cache lives in CatalogCache.
 object EquipmentCatalog {
-    // Maps seed-record favorite ids (non-numeric) to the id of their live
-    // record, matched via the operator inventory number (= the seed's FaSta
-    // equipment number, stable across both APIs). Pure, unit-tested. Only
-    // numeric candidates count as live — an appended seed record (which also
-    // carries the number) must not bridge to itself.
-    fun bridgedLiveIds(
-        ids: Set<String>,
-        seed: List<SeedCatalog.Record>,
-        catalog: List<AccessibilityCloudClient.Equipment>,
-    ): Map<String, String> {
-        val seedIds = ids.filter { it.toLongOrNull() == null }
-        if (seedIds.isEmpty() || catalog.isEmpty()) return emptyMap()
-        val seedById = firstWins(seed.map { it.id to it })
-        val liveByNumber = firstWins(
-            catalog.mapNotNull { record ->
-                if (record.id.toLongOrNull() == null) return@mapNotNull null
-                val number = record.fastaEquipmentNumber ?: record.inventoryId?.toIntOrNull()
-                number?.let { it to record.id }
-            }
-        )
-        return seedIds.mapNotNull { id ->
-            val number = seedById[id]?.fastaEquipmentNumber ?: return@mapNotNull null
-            liveByNumber[number]?.let { id to it }
-        }.toMap()
-    }
+    // Maps format-1 seed ids (non-numeric — favorites created from an old
+    // seed preview) to live ids via the seed's legacyIds. Pure, unit-tested.
+    fun bridgedLiveIds(ids: Set<String>, legacyIds: Map<String, String>): Map<String, String> =
+        ids.filter { it.toLongOrNull() == null }
+            .mapNotNull { id -> legacyIds[id]?.let { id to it } }
+            .toMap()
 
-    // Pure merge, unit-tested. `live` wins; matching runs over the operator
-    // inventory number (= the seed's FaSta equipment number, stable across
-    // both APIs). Matched records gain the seed's station/source/operator
-    // names, coordinates and region; whatever the match leaves empty — and
-    // everything on a record the number matches nothing for — falls back to
-    // the station (see stationBackfilled). Seed records the live catalog does not
-    // answer for are appended with unknown status — never a false "working":
-    // "fasta" records whose elevator is missing upstream, "brokenlifts"
-    // records while their whole station is absent (at a live station a stale
-    // record would just sit next to the real elevators), and the entire seed
-    // when offline. Unmatched accessibilityCloud records stay out either way
-    // — their stations are live, appending them would duplicate elevators.
-    // Whatever still has no coordinate after all that takes the station's
-    // from the seed's `stations` list (keyed by the station number) — the
-    // last resort for a station whose records carry no centroid upstream.
+    // Pure merge, unit-tested. Seed and live share their ids, so a live
+    // record takes from its seed record whatever it lacks — live always
+    // wins. Typically that is the station (stationId, name, modes, region)
+    // of an elevator upstream hasn't linked to a stop place, plus source and
+    // operator names. A live record the seed doesn't know (added upstream
+    // since the generation) falls back to the station: seed records at the
+    // same station name supply coordinates, region and — when they all name
+    // the same one — source/operator (see stationBackfilled). Seed records
+    // only stand in for live ones when there is no live data at all
+    // (offline, or a failed targeted fetch): then the whole seed is
+    // returned, status unknown — never a false "working". With live data an
+    // elevator missing from it is gone upstream and stays out. Whatever still
+    // has no coordinate takes its station's from the `stations` list.
     fun overlaid(
         live: List<AccessibilityCloudClient.Equipment>,
         seed: List<SeedCatalog.Record>,
         stations: List<SeedCatalog.Station> = emptyList(),
     ): List<AccessibilityCloudClient.Equipment> {
         val stationsById = firstWins(stations.map { it.stationId to it })
-        val seedByInventory = firstWins(
-            seed.mapNotNull { record ->
-                record.fastaEquipmentNumber?.let { it.toString() to record }
-            }
-        )
-
-        // Seed records by station, for the fallback below. Built from the
-        // whole seed, matched or not: at a station where two of three lifts
-        // matched, the third is exactly the record that needs the other two.
+        if (live.isEmpty()) return seed.map { stationCoordinated(equipment(it), stationsById) }
+        val seedById = firstWins(seed.map { it.id to it })
         val seedByStation = seed
             .filter { stationKey(it.stationName).isNotEmpty() }
             .groupBy { stationKey(it.stationName) }
-
-        val matchedSeedIds = mutableSetOf<String>()
-        val merged = live.map { equipment ->
-            val record = equipment.inventoryId?.let(seedByInventory::get)
-                ?: return@map stationBackfilled(equipment, seedByStation)
-            matchedSeedIds.add(record.id)
-            // Backfilled again on the way out: a matched seed record can
-            // itself carry no coordinates (Waßmannsdorf), which its siblings
-            // at the same station do.
-            stationBackfilled(
+        return live.map { equipment ->
+            val record = seedById[equipment.id]
+                ?: return@map stationCoordinated(stationBackfilled(equipment, seedByStation), stationsById)
+            // The seed's station replaces the live one only when live has
+            // none — id, name and modes travel together.
+            val hasStation = equipment.stationName.isNotEmpty()
+            stationCoordinated(
                 equipment.copy(
-                    stationName = equipment.stationName.ifEmpty { record.stationName },
+                    inventoryId = equipment.inventoryId ?: record.inventoryId,
+                    stationId = if (hasStation && equipment.stationId.isNotEmpty()) equipment.stationId else record.stationId,
+                    stationName = if (hasStation) equipment.stationName else record.stationName,
+                    stationNetworks = if (hasStation && equipment.stationNetworks.isNotEmpty()) {
+                        equipment.stationNetworks
+                    } else {
+                        record.networks
+                    },
+                    description = equipment.description.ifEmpty { record.description },
                     sourceName = equipment.sourceName.ifEmpty { record.sourceName },
                     organizationName = equipment.organizationName.ifEmpty { record.organizationName },
                     latitude = equipment.latitude ?: record.latitude,
                     longitude = equipment.longitude ?: record.longitude,
-                    fastaEquipmentNumber = record.fastaEquipmentNumber,
-                    region = equipment.region ?: TransitRegion.fromRawValue(record.region),
+                    region = equipment.region ?: record.transitRegion,
                 ),
-                seedByStation,
+                stationsById,
             )
         }
-
-        val liveStationIds = merged.map { it.stationId }.toSet()
-        val appended = merged.toMutableList()
-        for (record in seed) {
-            if (record.id in matchedSeedIds) continue
-            val append = when {
-                live.isEmpty() -> true
-                record.source == "fasta" -> true
-                record.source == "brokenlifts"
-                    && record.brokenliftsStationId.orEmpty() !in liveStationIds -> true
-                else -> false
-            }
-            if (!append) continue
-            appended.add(
-                AccessibilityCloudClient.Equipment(
-                    id = record.id,
-                    stationId = record.brokenliftsStationId
-                        ?: record.stationNumber?.toString() ?: "",
-                    stationName = record.stationName,
-                    description = record.description,
-                    isWorking = null,
-                    lastUpdateEpochMillis = null,
-                    sourceName = record.sourceName,
-                    organizationName = record.organizationName,
-                    latitude = record.latitude,
-                    longitude = record.longitude,
-                    fastaEquipmentNumber = record.fastaEquipmentNumber,
-                    brokenliftsIndex = record.brokenliftsIndex,
-                    region = TransitRegion.fromRawValue(record.region),
-                )
-            )
-        }
-        return appended.map { stationCoordinated(it, stationsById) }
     }
 
-    // The station's own coordinate for a record that has none — after the
-    // live centroid and the seed's siblings, never instead of them. Pure,
-    // unit-tested.
+    // A seed record as a status-unknown catalog record.
+    fun equipment(record: SeedCatalog.Record): AccessibilityCloudClient.Equipment =
+        AccessibilityCloudClient.Equipment(
+            id = record.id,
+            inventoryId = record.inventoryId,
+            stationId = record.stationId,
+            stationName = record.stationName,
+            stationNetworks = record.networks,
+            description = record.description,
+            isWorking = null,
+            lastUpdateEpochMillis = null,
+            sourceName = record.sourceName,
+            organizationName = record.organizationName,
+            latitude = record.latitude,
+            longitude = record.longitude,
+            region = record.transitRegion,
+        )
+
+    // The station's own coordinate (and region) for a record that has none —
+    // after the live centroid and the seed's siblings, never instead of them.
+    // Pure, unit-tested.
     fun stationCoordinated(
         equipment: AccessibilityCloudClient.Equipment,
         stationsById: Map<String, SeedCatalog.Station>,
     ): AccessibilityCloudClient.Equipment {
-        if (equipment.latitude != null && equipment.longitude != null) return equipment
+        val needsCoordinate = equipment.latitude == null || equipment.longitude == null
+        if (!needsCoordinate && equipment.region != null) return equipment
         val station = stationsById[equipment.stationId] ?: return equipment
-        return equipment.copy(latitude = station.latitude, longitude = station.longitude)
+        return equipment.copy(
+            latitude = if (needsCoordinate) station.latitude else equipment.latitude,
+            longitude = if (needsCoordinate) station.longitude else equipment.longitude,
+            region = equipment.region ?: TransitRegion.fromRawValue(station.region),
+        )
     }
 
     // What a live record the inventory number answered incompletely (or not

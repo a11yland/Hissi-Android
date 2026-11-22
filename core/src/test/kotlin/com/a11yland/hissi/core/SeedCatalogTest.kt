@@ -1,9 +1,8 @@
 package com.a11yland.hissi.core
 
-import java.time.Instant
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -13,68 +12,22 @@ import kotlin.test.assertTrue
 
 private val seedJSON = """
 {
- "generatedAt": "2026-07-19T21:00:00Z",
- "elevators": [
-  {
-   "id": "g9DnAE6CioBKy6kbn",
-   "source": "accessibilityCloud",
-   "acId": "g9DnAE6CioBKy6kbn",
-   "stationName": "S Pankow-Heinersdorf (Berlin)",
-   "description": "Prenzlauer Promenade ⟷ S-Bahnsteig Gl. 1/2",
-   "latitude": 52.577603,
-   "longitude": 13.42909,
-   "sourceName": "VBB Anlagen (S-Bahn)",
-   "organizationName": "VBB",
-   "fastaEquipmentNumber": 10906243,
-   "region": "berlin"
-  },
-  {
-   "id": "hugGa4c2AnzMaWWQu",
-   "source": "accessibilityCloud",
-   "acId": "hugGa4c2AnzMaWWQu",
-   "stationName": "Waßmannsdorf",
-   "description": "Waßmannsdorf zu Gleis 1",
-   "latitude": null,
-   "longitude": null,
-   "sourceName": "VBB Anlagen (S-Bahn)",
-   "organizationName": "VBB",
-   "fastaEquipmentNumber": 10466002
-  },
-  {
-   "id": "fasta-10466003",
-   "source": "fasta",
-   "fastaEquipmentNumber": 10466003,
-   "stationNumber": 7723,
-   "stationName": "Waßmannsdorf",
-   "description": "zu Gleis 2",
-   "latitude": 52.3683272,
-   "longitude": 13.4637534,
-   "sourceName": "DB FaSta",
-   "organizationName": "DB InfraGO",
-   "region": "brandenburg"
-  },
-  {
-   "id": "brokenlifts-900009103-0",
-   "source": "brokenlifts",
-   "brokenliftsStationId": "900009103",
-   "brokenliftsIndex": 0,
-   "stationName": "U Seestr.",
-   "description": "Aufzug zwischen U-Bahnsteig i. Ri. Alt-Tegel und Müllerstr.",
-   "latitude": 52.550471,
-   "longitude": 13.351966,
-   "sourceName": "brokenlifts.org",
-   "organizationName": "Berliner Verkehrsbetriebe (BVG)"
-  }
- ],
- "stations": [
-  {
-   "stationId": "900100015",
-   "dhid": "de:11000:900100015",
-   "name": "Klosterstraße (Berlin)",
-   "latitude": 52.517229,
-   "longitude": 13.412455
-  }
- ]
+"version":2,
+"generatedAt":"2026-11-21T20:00:00Z",
+"elevators":[
+ {"id":"6696","inventoryId":"5279","stationId":"900130002","stationName":"Pankow (Berlin)","stationModes":[1,2],"region":"berlin","description":"Vorhalle ↔ Bahnsteig U2","latitude":52.567,"longitude":13.412,"sourceName":"BVG","organizationName":"Berliner Verkehrsbetriebe (BVG)"},
+ {"id":"6697","stationId":"900130002","stationName":"Pankow (Berlin)","stationModes":[1,2],"region":"berlin","description":"Vorhalle ↔ S-Bahnsteig","sourceName":"BVG","organizationName":"Berliner Verkehrsbetriebe (BVG)"},
+ {"id":"3910","inventoryId":"10855569","stationId":"name:Dinslaken Bahnhof","stationName":"Dinslaken Bahnhof","stationModes":[],"region":"nordrhein-westfalen","description":"→ Bahnsteig 2","latitude":51.567681,"longitude":6.738101,"sourceName":"DB FaSta","organizationName":"DB InfraGO"},
+ {"id":"4011","stationId":"name:Wernau (N)","stationName":"Wernau (N)","description":"→ Gleis 1"}
+],
+"stations":[
+ {"stationId":"900130002","dhid":"de:11000:900130002","name":"Pankow (Berlin)","region":"berlin","latitude":52.5671,"longitude":13.4121},
+ {"stationId":"name:Wernau (N)","name":"Wernau (N)","region":"baden-wuerttemberg","latitude":48.6890,"longitude":9.4160}
+],
+"legacyIds":{
+ "fasta-10855569":"3910",
+ "z87ZFWJs5aB2seuYf":"6696"
+}
 }
 """
 
@@ -83,283 +36,184 @@ class SeedCatalogTest {
     fun parsesAllRecordsWithOptionalFields() {
         val records = SeedCatalog.parse(seedJSON)
         assertEquals(4, records.size)
-        val heinersdorf = assertNotNull(records.firstOrNull { it.id == "g9DnAE6CioBKy6kbn" })
-        assertEquals(10906243, heinersdorf.fastaEquipmentNumber)
-        assertNull(heinersdorf.stationNumber)
-        val fastaOnly = assertNotNull(records.firstOrNull { it.source == "fasta" })
-        assertEquals(7723, fastaOnly.stationNumber)
-        val brokenlifts = assertNotNull(records.firstOrNull { it.source == "brokenlifts" })
-        assertEquals("900009103", brokenlifts.brokenliftsStationId)
-        assertEquals(0, brokenlifts.brokenliftsIndex)
+        val pankow = records.first()
+        assertEquals("6696", pankow.id)
+        assertEquals("5279", pankow.inventoryId)
+        assertEquals(setOf(TransitNetwork.SBahn, TransitNetwork.UBahn), pankow.networks)
+        assertEquals(TransitRegion.Berlin, pankow.transitRegion)
+        // Missing fields decode to their empty values.
+        val bare = records.last()
+        assertNull(bare.inventoryId)
+        assertTrue(bare.stationModes.isEmpty())
+        assertNull(bare.region)
+        assertNull(bare.latitude)
+        assertTrue(bare.sourceName.isEmpty())
+    }
+
+    @Test
+    fun parsesStationsAndLegacyIds() {
+        val stations = SeedCatalog.parseStations(seedJSON)
+        assertEquals(listOf("900130002", "name:Wernau (N)"), stations.map { it.stationId })
+        assertNull(stations[1].dhid)
+        assertEquals(
+            mapOf("fasta-10855569" to "3910", "z87ZFWJs5aB2seuYf" to "6696"),
+            SeedCatalog.parseLegacyIds(seedJSON),
+        )
     }
 
     @Test
     fun unparseableDataYieldsEmpty() {
         assertTrue(SeedCatalog.parse("nonsense").isEmpty())
+        assertTrue(SeedCatalog.parseStations("{}").isEmpty())
+        assertTrue(SeedCatalog.parseLegacyIds("{}").isEmpty())
     }
 
+    // The bundled seed itself: live ids only, every record at a station, and
+    // every station known to the coordinate list. Gradle runs the tests in
+    // the module directory.
     @Test
-    fun parsesTheStationListAndToleratesItsAbsence() {
-        val stations = SeedCatalog.parseStations(seedJSON)
-        assertEquals(1, stations.size)
-        assertEquals("900100015", stations.first().stationId)
-        assertEquals(52.517229, stations.first().latitude)
-        // A seed from before the list existed.
-        assertTrue(SeedCatalog.parseStations("""{"elevators": []}""").isEmpty())
-        assertTrue(SeedCatalog.parse("""{"elevators": []}""").isEmpty())
-    }
-}
-
-// The seed's station list: the station's own coordinate for a record that
-// nothing else places — a live record without a centroid at a station the
-// seed has no elevator for. Ported from StationCoordinateTests.
-class StationCoordinateTest {
-    private val seed get() = SeedCatalog.parse(seedJSON)
-    private val stations get() = SeedCatalog.parseStations(seedJSON)
-
-    private fun live(
-        stationId: String,
-        stationName: String,
-        inventoryId: String? = null,
-        latitude: Double? = null,
-        longitude: Double? = null,
-    ) = AccessibilityCloudClient.Equipment(
-        id = "6740", inventoryId = inventoryId, stationId = stationId, stationName = stationName,
-        description = "Straße ↔ Bahnsteig", isWorking = true, lastUpdateEpochMillis = null,
-        latitude = latitude, longitude = longitude,
-    )
-
-    @Test
-    fun placesARecordNothingElseCan() {
-        val merged = EquipmentCatalog.overlaid(
-            live = listOf(live("900100015", "Klosterstraße (Berlin)")),
-            seed = seed, stations = stations,
-        )
-        val record = assertNotNull(merged.firstOrNull { it.id == "6740" })
-        assertEquals(52.517229, record.latitude)
-        assertEquals(13.412455, record.longitude)
-    }
-
-    @Test
-    fun liveCentroidAndSeedSiblingsWin() {
-        val own = EquipmentCatalog.overlaid(
-            live = listOf(live("900100015", "Klosterstraße (Berlin)", latitude = 52.5, longitude = 13.4)),
-            seed = seed, stations = stations,
-        )
-        assertEquals(52.5, own.first().latitude)
-        // Waßmannsdorf: the matched seed record has no coordinates, its
-        // fasta sibling does — that sibling comes before the station list.
-        val sibling = EquipmentCatalog.overlaid(
-            live = listOf(live("900260022", "Waßmannsdorf", inventoryId = "10466002")),
-            seed = seed,
-            stations = listOf(SeedCatalog.Station("900260022", null, "Waßmannsdorf", 1.0, 1.0)),
-        )
-        assertEquals(52.3683272, assertNotNull(sibling.firstOrNull { it.id == "6740" }).latitude)
-    }
-
-    @Test
-    fun unknownStationStaysUnplaced() {
-        val merged = EquipmentCatalog.overlaid(
-            live = listOf(live("900000001", "Nirgendwo")),
-            seed = seed, stations = stations,
-        )
-        assertNull(merged.first().latitude)
+    fun bundledSeedIsConsistent() {
+        val data = File("../app/src/main/assets/seed-catalog.json").readText()
+        val records = SeedCatalog.parse(data)
+        val stations = SeedCatalog.parseStations(data).map { it.stationId }.toSet()
+        assertTrue(records.size > 1000)
+        assertTrue(records.all { it.id.toLongOrNull() != null })
+        assertEquals(records.size, records.map { it.id }.toSet().size)
+        assertTrue(records.all { it.stationName.isNotEmpty() && it.stationId in stations })
+        assertTrue(records.all { it.transitRegion != null })
+        val ids = records.map { it.id }.toSet()
+        assertTrue(SeedCatalog.parseLegacyIds(data).values.all { it in ids })
     }
 }
 
 class CatalogOverlayTest {
-    private val seed: List<SeedCatalog.Record> get() = SeedCatalog.parse(seedJSON)
+    private val seed get() = SeedCatalog.parse(seedJSON)
+    private val stations get() = SeedCatalog.parseStations(seedJSON)
 
-    private fun liveEquipment(
-        id: String = "6225",
-        inventoryId: String? = "10906243",
-        stationName: String = "Pankow-Heinersdorf (Berlin)",
+    private fun live(
+        id: String,
+        stationId: String = "",
+        stationName: String = "",
+        description: String = "",
+        latitude: Double? = null,
+        longitude: Double? = null,
     ) = AccessibilityCloudClient.Equipment(
-        id = id,
-        inventoryId = inventoryId,
-        stationId = "900130011",
-        stationName = stationName,
-        description = "Straßenland ⟷ Gleis 1/2 (S-Bahn)",
-        isWorking = true,
-        lastUpdateEpochMillis = Instant.now().toEpochMilli(),
+        id = id, stationId = stationId, stationName = stationName,
+        description = description, isWorking = true,
+        latitude = latitude, longitude = longitude,
     )
 
-    // The operator inventory number (= the seed's FaSta equipment number)
-    // matches live records to the seed, which backfills what the API doesn't
-    // serve — names, coordinates, region.
+    // An elevator upstream hasn't linked to a stop place arrives without a
+    // station — the seed's (assigned) station makes it searchable.
     @Test
-    fun inventoryNumberMatchBackfillsSeedMetadata() {
-        val merged = EquipmentCatalog.overlaid(live = listOf(liveEquipment()), seed = seed)
-        val record = assertNotNull(merged.firstOrNull { it.id == "6225" })
-        assertEquals(10906243, record.fastaEquipmentNumber)
-        assertEquals("VBB Anlagen (S-Bahn)", record.sourceName)
-        assertEquals(52.577603, record.latitude)
-        assertEquals(TransitRegion.Berlin, record.region)
+    fun unlinkedLiveRecordTakesTheSeedStation() {
+        val merged = EquipmentCatalog.overlaid(
+            live = listOf(live(id = "3910", description = "→ Bahnsteig 2", latitude = 51.5, longitude = 6.7)),
+            seed = seed, stations = stations,
+        )
+        val record = merged.single()
+        assertEquals("name:Dinslaken Bahnhof", record.stationId)
+        assertEquals("Dinslaken Bahnhof", record.stationName)
+        assertEquals(TransitRegion.NordrheinWestfalen, record.region)
+        assertEquals("DB FaSta", record.sourceName)
+        assertEquals("DB InfraGO", record.organizationName)
+        assertEquals("10855569", record.inventoryId)
+        // Live wins where it has a value.
+        assertEquals(51.5, record.latitude)
         assertEquals(true, record.isWorking)
-        // The matched seed record must not reappear as a duplicate.
-        assertFalse(merged.any { it.id == "g9DnAE6CioBKy6kbn" })
-        assertEquals(3, merged.size) // live + fasta and brokenlifts gap records
     }
 
+    // A linked live record keeps its own station; the seed only fills the
+    // rest.
     @Test
-    fun emptyStationNameIsBackfilledFromSeed() {
+    fun linkedLiveRecordKeepsItsStation() {
         val merged = EquipmentCatalog.overlaid(
-            live = listOf(liveEquipment(id = "5034", inventoryId = "10466002", stationName = "")),
-            seed = seed,
+            live = listOf(
+                live(id = "6696", stationId = "900130002", stationName = "Pankow (Berlin)",
+                    description = "Vorhalle ↔ Bahnsteig U2"),
+            ),
+            seed = seed, stations = stations,
         )
-        val record = assertNotNull(merged.firstOrNull { it.id == "5034" })
-        assertEquals("Waßmannsdorf", record.stationName)
+        val record = merged.single()
+        assertEquals("Pankow (Berlin)", record.stationName)
+        assertEquals(setOf(TransitNetwork.SBahn, TransitNetwork.UBahn), record.stationNetworks)
+        assertEquals(52.567, record.latitude)
+        assertEquals("BVG", record.sourceName)
     }
 
-    // A "fasta" record whose inventory number appears live is answered by the
-    // API — it must not be appended on top.
+    // With live data, a seed record live doesn't answer for is gone upstream
+    // and stays out — no duplicates, no ghosts.
     @Test
-    fun fastaRecordMatchedByInventoryIsNotAppended() {
-        val live = liveEquipment(id = "4972", inventoryId = "10466003", stationName = "Waßmannsdorf")
-        val merged = EquipmentCatalog.overlaid(live = listOf(live), seed = seed)
-        assertFalse(merged.any { it.id == "fasta-10466003" })
-        assertEquals(10466003, merged.firstOrNull { it.id == "4972" }?.fastaEquipmentNumber)
-    }
-
-    // Seed records the live catalog does not answer for stay searchable with
-    // unknown status: "fasta" records missing upstream, "brokenlifts" records
-    // while their whole station is absent. Unmatched accessibilityCloud
-    // records must not duplicate live elevators.
-    @Test
-    fun unansweredGapRecordsAreAppendedWithUnknownStatus() {
-        val merged = EquipmentCatalog.overlaid(live = listOf(liveEquipment()), seed = seed)
-        val fastaOnly = assertNotNull(merged.firstOrNull { it.id == "fasta-10466003" })
-        assertNull(fastaOnly.isWorking)
-        assertEquals("7723", fastaOnly.stationId)
-        assertEquals(TransitRegion.Brandenburg, fastaOnly.region)
-        // Live catalog has no station 900009103 ⇒ the brokenlifts record fills
-        // the gap… (see next test for the covered-station case)
-        assertTrue(merged.any { it.id == "brokenlifts-900009103-0" })
-        assertFalse(merged.any { it.id == "hugGa4c2AnzMaWWQu" })
+    fun seedRecordsMissingLiveAreNotAppended() {
+        val merged = EquipmentCatalog.overlaid(live = listOf(live(id = "3910")), seed = seed, stations = stations)
+        assertEquals(listOf("3910"), merged.map { it.id })
     }
 
     @Test
-    fun brokenliftsRecordAtLiveStationIsDropped() {
-        val seestrasse = AccessibilityCloudClient.Equipment(
-            id = "6743",
-            stationId = "900009103",
-            stationName = "Seestraße (Berlin)",
-            description = "Straße ⟷ U6 (→ Alt-Tegel)",
-            isWorking = true,
-            lastUpdateEpochMillis = Instant.now().toEpochMilli(),
-        )
-        val merged = EquipmentCatalog.overlaid(live = listOf(seestrasse), seed = seed)
-        // The station is live — a stale seed record would just sit next to
-        // the real elevator.
-        assertFalse(merged.any { it.id == "brokenlifts-900009103-0" })
+    fun offlineFallbackServesWholeSeedUnknown() {
+        val merged = EquipmentCatalog.overlaid(live = emptyList(), seed = seed, stations = stations)
+        assertEquals(listOf("6696", "6697", "3910", "4011"), merged.map { it.id })
+        assertTrue(merged.all { it.isWorking == null })
     }
 
-    // The inventory number goes stale upstream (~30 of the seed's numbers,
-    // e.g. U Spittelmarkt) and thousands of live records have no seed
-    // counterpart at all. Since the API serves neither coordinates nor
-    // source/operator names, such a record would lose its map and both name
-    // rows — the seed records of the same station answer for it.
+    // No centroid: the station's coordinate (and region) from the list.
     @Test
-    fun unmatchedRecordIsBackfilledFromItsStation() {
+    fun stationListPlacesRecordsWithoutCoordinates() {
+        val merged = EquipmentCatalog.overlaid(live = emptyList(), seed = seed, stations = stations)
+        assertEquals(52.5671, assertNotNull(merged.first { it.id == "6697" }).latitude)
+        val wernau = merged.first { it.id == "4011" }
+        assertEquals(48.6890, wernau.latitude)
+        assertEquals(TransitRegion.BadenWuerttemberg, wernau.region)
+    }
+
+    // An elevator added upstream after the generation: its station's seed
+    // records answer for coordinates, region and the unanimous operator.
+    @Test
+    fun unknownLiveRecordIsBackfilledFromItsStation() {
         val merged = EquipmentCatalog.overlaid(
-            live = listOf(liveEquipment(id = "9001", inventoryId = "5279")),
-            seed = seed,
+            live = listOf(live(id = "9001", stationId = "900130002", stationName = "Pankow (Berlin)")),
+            seed = seed, stations = stations,
         )
-        val record = assertNotNull(merged.firstOrNull { it.id == "9001" })
-        assertEquals(52.577603, record.latitude)
-        assertEquals(13.42909, record.longitude)
-        assertEquals("VBB Anlagen (S-Bahn)", record.sourceName)
-        assertEquals("VBB", record.organizationName)
+        val record = merged.single()
+        assertEquals(52.567, record.latitude)
         assertEquals(TransitRegion.Berlin, record.region)
-        // The station answers for metadata, never for identity: the number
-        // is what favorites bridge on.
-        assertNull(record.fastaEquipmentNumber)
-        // …and the seed record it borrowed from stays a match for its own
-        // live record, not a duplicate.
-        assertFalse(merged.any { it.id == "g9DnAE6CioBKy6kbn" })
-    }
-
-    // Waßmannsdorf carries a VBB and a DB FaSta record — who runs this lift
-    // is genuinely unknown, so those rows stay empty. The coordinates are a
-    // station property and fill regardless.
-    @Test
-    fun ambiguousStationLeavesSourceAndOperatorEmpty() {
-        val merged = EquipmentCatalog.overlaid(
-            live = listOf(
-                liveEquipment(id = "9002", inventoryId = "5279", stationName = "Waßmannsdorf")
-            ),
-            seed = seed,
-        )
-        val record = assertNotNull(merged.firstOrNull { it.id == "9002" })
-        assertEquals(52.3683272, record.latitude)
-        assertTrue(record.sourceName.isEmpty())
-        assertTrue(record.organizationName.isEmpty())
-        assertEquals(TransitRegion.Brandenburg, record.region)
-    }
-
-    // A matched seed record can itself carry no coordinates — its siblings
-    // at the same station do.
-    @Test
-    fun matchedRecordWithoutSeedCoordinatesFallsBackToItsStation() {
-        val merged = EquipmentCatalog.overlaid(
-            live = listOf(
-                liveEquipment(id = "5034", inventoryId = "10466002", stationName = "Waßmannsdorf")
-            ),
-            seed = seed,
-        )
-        val record = assertNotNull(merged.firstOrNull { it.id == "5034" })
-        assertEquals(52.3683272, record.latitude)
-        // The match itself named the source — no ambiguity to resolve.
-        assertEquals("VBB Anlagen (S-Bahn)", record.sourceName)
+        assertEquals("BVG", record.sourceName)
+        assertEquals("Berliner Verkehrsbetriebe (BVG)", record.organizationName)
     }
 
     @Test
     fun stationFallbackNeverReachesAcrossStations() {
         val merged = EquipmentCatalog.overlaid(
-            live = listOf(
-                liveEquipment(id = "9003", inventoryId = null, stationName = "Ostkreuz (Berlin)")
-            ),
-            seed = seed,
+            live = listOf(live(id = "9003", stationName = "Ostkreuz (Berlin)")),
+            seed = seed, stations = stations,
         )
-        val record = assertNotNull(merged.firstOrNull { it.id == "9003" })
+        val record = merged.single()
         assertNull(record.latitude)
         assertTrue(record.sourceName.isEmpty())
         assertNull(record.region)
     }
 
-    // The two datasets differ by the network prefix; everything else must
-    // keep stations apart.
+    // Station names differ by the network prefix between operator feeds;
+    // everything else must keep stations apart.
     @Test
     fun stationKeyFoldsOnlyTheNetworkPrefix() {
         assertEquals(
-            EquipmentCatalog.stationKey("Spittelmarkt (Berlin)"),
             EquipmentCatalog.stationKey("U Spittelmarkt (Berlin)"),
+            EquipmentCatalog.stationKey("Spittelmarkt (Berlin)"),
         )
         assertEquals(
-            EquipmentCatalog.stationKey("Pankow (Berlin)"),
             EquipmentCatalog.stationKey("S+U Pankow (Berlin)"),
+            EquipmentCatalog.stationKey("Pankow (Berlin)"),
         )
         assertEquals(
-            EquipmentCatalog.stationKey("ostkreuz (berlin)"),
             EquipmentCatalog.stationKey("S Ostkreuz (Berlin)"),
+            EquipmentCatalog.stationKey("ostkreuz (berlin)"),
         )
         assertNotEquals(
             EquipmentCatalog.stationKey("Pankow (Berlin)"),
             EquipmentCatalog.stationKey("Pankow-Heinersdorf (Berlin)"),
         )
-        assertNotEquals(
-            EquipmentCatalog.stationKey("Ostkreuz"),
-            EquipmentCatalog.stationKey("Ostkreuz (Berlin)"),
-        )
+        assertNotEquals(EquipmentCatalog.stationKey("Ostkreuz"), EquipmentCatalog.stationKey("Ostkreuz (Berlin)"))
         assertTrue(EquipmentCatalog.stationKey("").isEmpty())
-    }
-
-    @Test
-    fun offlineFallbackServesWholeSeed() {
-        val merged = EquipmentCatalog.overlaid(live = emptyList(), seed = seed)
-        assertEquals(4, merged.size)
-        assertTrue(merged.all { it.isWorking == null })
-        // Seeds from before the region field existed decode to null.
-        assertNull(merged.firstOrNull { it.id == "brokenlifts-900009103-0" }?.region)
     }
 }

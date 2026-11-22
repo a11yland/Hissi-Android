@@ -88,7 +88,7 @@ fun SearchResultsContent(
                 if (regions.size > 1) {
                     item(key = "region-${regionGroup.id}") {
                         Text(
-                            regionGroup.region.label,
+                            regionLabel(regionGroup.region),
                             style = MaterialTheme.typography.titleLarge,
                             modifier = Modifier
                                 .padding(start = 16.dp, top = 16.dp, bottom = 4.dp)

@@ -45,7 +45,9 @@
     <string name="about_version">Version %1$s</string>
     <string name="about_data_title">Data</string>
     <string name="about_data_detail">Elevator data comes from accessibility.cloud, a project by the non-profit Sozialhelden e.V.</string>
-    <string name="about_tagline">Elevator status for Berlin and Brandenburg</string>
+    <string name="about_stations_detail">Station names and locations come from DELFI e.V. via gtfs.de (CC BY 4.0) and VBB Verkehrsverbund Berlin-Brandenburg GmbH (CC BY).</string>
+    <string name="about_license_cc_by">License CC BY 4.0</string>
+    <string name="about_tagline">Elevator status for Berlin, Brandenburg and Deutsche Bahn stations</string>
     <string name="about_features_title">Features</string>
     <string name="about_privacy_title">Privacy</string>
     <string name="about_privacy_detail">Hissi needs no account and collects no data. Favorites stay on your device; your location never leaves the device.</string>
@@ -68,6 +70,17 @@
     <string name="relative_on_date">on %1$s</string>
 
     <string name="network_regional">Regional rail</string>
+    <!-- Federal states (search result headers); the others are spelled the same in both languages. -->
+    <string name="region_baden_wuerttemberg">Baden-Württemberg</string>
+    <string name="region_bayern">Bavaria</string>
+    <string name="region_hessen">Hesse</string>
+    <string name="region_mecklenburg_vorpommern">Mecklenburg-Western Pomerania</string>
+    <string name="region_niedersachsen">Lower Saxony</string>
+    <string name="region_nordrhein_westfalen">North Rhine-Westphalia</string>
+    <string name="region_rheinland_pfalz">Rhineland-Palatinate</string>
+    <string name="region_sachsen">Saxony</string>
+    <string name="region_sachsen_anhalt">Saxony-Anhalt</string>
+    <string name="region_thueringen">Thuringia</string>
     <string name="network_access">Access</string>
     <string name="network_regional_spoken">Regional rail</string>
     <string name="appearance_light">Switch to light appearance</string>
@@ -147,4 +160,6 @@
     <string name="whats_new_1_3_interface_detail">Disruption alerts behind the bell, more room for your favorites list, a bigger nearby stations button and clearer notices.</string>
     <string name="whats_new_1_3_accessibility_title">More accessible</string>
     <string name="whats_new_1_3_accessibility_detail">Higher contrast, more room for large text and better TalkBack support.</string>
+    <string name="whats_new_1_4_germany_title">Deutsche Bahn elevators across Germany</string>
+    <string name="whats_new_1_4_germany_detail">Hissi now also knows the Deutsche Bahn elevators at stations outside Berlin and Brandenburg. Search results are sorted by federal state.</string>
 </resources>

@@ -14,6 +14,19 @@ class TransitRegionTest {
     fun agsPrefixDecidesRegion() {
         assertEquals(TransitRegion.Berlin, TransitRegion.fromOriginalPlaceInfoId("de:11000:900100015"))
         assertEquals(TransitRegion.Brandenburg, TransitRegion.fromOriginalPlaceInfoId("de:12054:900230999"))
+        assertEquals(TransitRegion.Bayern, TransitRegion.fromOriginalPlaceInfoId("de:09162:6"))
+        assertEquals(TransitRegion.NordrheinWestfalen, TransitRegion.fromOriginalPlaceInfoId("de:05315:11201"))
+        assertEquals(TransitRegion.SchleswigHolstein, TransitRegion.fromOriginalPlaceInfoId("de:01002:1"))
+        assertNull(TransitRegion.fromOriginalPlaceInfoId("de:17000:1"))
+    }
+
+    // The generator writes these raw values into the seed — they must match.
+    @Test
+    fun rawValuesAreTheSeedsRegionValues() {
+        assertEquals(16, TransitRegion.entries.size)
+        assertEquals(TransitRegion.BadenWuerttemberg, TransitRegion.fromRawValue("baden-wuerttemberg"))
+        assertEquals(TransitRegion.Thueringen, TransitRegion.fromRawValue("thueringen"))
+        assertEquals(listOf(TransitRegion.Berlin, TransitRegion.Brandenburg), TransitRegion.entries.take(2))
     }
 
     @Test
@@ -54,6 +67,53 @@ class TransitNetworkTest {
                 description = "Zugang Bahnsteig Gl. 11/12",
                 stationName = "S+U Lichtenberg Bhf (Berlin)",
                 sourceName = "VBB-Anlagen (DB Regio)",
+            ),
+        )
+    }
+
+    // DB marks S-Bahn platforms in the description — the only hint at a
+    // station serving S-Bahn and regional trains, and at assigned stations
+    // without modes.
+    @Test
+    fun fastaDescriptionMarksSBahnPlatforms() {
+        val all = setOf(TransitNetwork.SBahn, TransitNetwork.UBahn, TransitNetwork.Regional)
+        assertEquals(
+            TransitNetwork.SBahn,
+            TransitNetwork.classify(
+                description = "Gl. 3/4 (S-Bahn) ↔ Empfangsgebäude",
+                stationName = "Alexanderplatz Bahnhof (Berlin)", sourceName = "DB FaSta", stationModes = all,
+            ),
+        )
+        assertEquals(
+            TransitNetwork.SBahn,
+            TransitNetwork.classify(
+                description = "S-Bahnsteig Gl. 22 ↔ 1. UG", stationName = "Berlin Hauptbahnhof", sourceName = "DB FaSta",
+            ),
+        )
+        assertEquals(
+            TransitNetwork.Regional,
+            TransitNetwork.classify(
+                description = "Gl. 1/2 ↔ Empfangsgebäude ↔ Passage",
+                stationName = "Alexanderplatz Bahnhof (Berlin)", sourceName = "DB FaSta", stationModes = all,
+            ),
+        )
+    }
+
+    // ~300 DB elevators come without a feed — the operator marks them as DB.
+    @Test
+    fun dbOperatorWithoutFeedIsTreatedAsDB() {
+        assertEquals(
+            TransitNetwork.SBahn,
+            TransitNetwork.classify(
+                description = "Haupthalle - ZG (→ . S-Bahn)", stationName = "München Hbf",
+                sourceName = "", organizationName = "DB InfraGO",
+            ),
+        )
+        assertEquals(
+            TransitNetwork.Regional,
+            TransitNetwork.classify(
+                description = "UG → 3.OG", stationName = "München Hbf",
+                sourceName = "", organizationName = "DB InfraGO",
             ),
         )
     }

@@ -5,8 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project overview
 
 Hissi for Android shows whether the elevators at Berlin and Brandenburg
-stations work, for wheelchair users, parents with strollers and people with
-luggage. Users star elevators (favorites), search stations, see nearby
+stations and at Deutsche Bahn stations across Germany work, for wheelchair
+users, parents with strollers and people with luggage. Users star elevators (favorites), search stations, see nearby
 stations, get disruption alerts and use two home-screen widgets. Kotlin +
 Jetpack Compose (Material 3), Glance widgets, WorkManager.
 
@@ -51,6 +51,7 @@ the catalog before bumping anything.
   network and pagination, `AccessibilityCloudClient` for pure parsing and
   joins), catalog handling (`CatalogCache`, `EquipmentCatalog`, `SeedCatalog`,
   `StatusMerge`), search (`SearchGrouping`, `SearchHighlight`,
+  `StationAliases` — Hbf/Hauptbahnhof, Bhf/Bf/Bahnhof —,
   `TransitClassification`), `NearbyStations`, `DisruptionAlert` transition
   rules, `FavoritesOrdering`, `WelcomeGate`, and `Palette` + `WcagContrast`
   (colours as hex strings so tests can compute contrast). Tests in
@@ -78,8 +79,9 @@ the catalog before bumping anything.
 - **Data source:** transit.accessibility.cloud (Payload CMS, Bearer token):
   three flat collections (Elevators, StatusSpans, StopPlaces) fetched with
   depth=0 and joined locally; targeted `where[id][in]` fetch for favorites.
-  `app/src/main/assets/seed-catalog.json` is the bundled seed, generated in
-  Hissi-iOS and copied per release. Refresh cadence is 30 minutes
+  `app/src/main/assets/seed-catalog.json` is the bundled seed (format 2, live
+  ids, nationwide stations for the DB elevators), generated in Hissi-iOS and
+  copied per release. Refresh cadence is 30 minutes
   (`RefreshInterval`).
 - Platform-free logic goes into `:core` with a test; `:app` only maps it onto
   Android (string resources, Compose, Glance).

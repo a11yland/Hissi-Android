@@ -1,7 +1,7 @@
 # Accessibility
 
-Hissi shows whether the elevators at Berlin and Brandenburg stations are
-working. It is built for people who depend on those elevators: wheelchair
+Hissi shows whether the elevators at Berlin and Brandenburg stations and at
+Deutsche Bahn stations across Germany are working. It is built for people who depend on those elevators: wheelchair
 users, people with walkers, parents with strollers, travellers with heavy
 luggage. Accessibility is the purpose of the product, not an add-on.
 
