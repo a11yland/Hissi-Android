@@ -1,9 +1,11 @@
 package com.a11yland.hissi
 
 import android.graphics.Bitmap
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -69,8 +71,7 @@ class ScreenshotTests {
             // The keyboard would cover half the shot; Back only closes it.
             shell("input keyevent 4")
             compose.waitUntil(TIMEOUT) {
-                compose.onAllNodesWithText("Alexanderplatz", substring = true)
-                    .fetchSemanticsNodes().size > 2
+                compose.onAllNodes(mentions("Alexanderplatz")).fetchSemanticsNodes().size > 2
             }
             snap("02-suche")
         }
@@ -111,9 +112,15 @@ class ScreenshotTests {
 
     private fun waitForText(text: String) {
         compose.waitUntil(TIMEOUT) {
-            compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodes(mentions(text)).fetchSemanticsNodes().isNotEmpty()
         }
     }
+
+    // Elevator rows and search headers replace their children's text with one
+    // spoken contentDescription (clearAndSetSemantics), so a text-only
+    // matcher never sees a station name there.
+    private fun mentions(text: String): SemanticsMatcher =
+        hasText(text, substring = true) or hasContentDescription(text, substring = true)
 
     private fun snap(name: String) {
         compose.waitForIdle()

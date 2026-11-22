@@ -16,7 +16,7 @@
 # for any other language; 1080 x 1920, the native shot scaled to 1920 high
 # and centred on the app's ground (read from the shot's top-left pixel, so
 # dark shots get the dark ground). Raw shots in build/screenshots/<lang>/
-# (gitignored).
+# (gitignored), with the device log and, on a failure, the screen as left.
 set -eu
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -67,10 +67,17 @@ for language in $LANGUAGES; do
   adb shell pm clear "$APP" >/dev/null
   adb shell cmd locale set-app-locales "$APP" --locales "$language-$(region_of "$language")"
   log="$raw/instrument.log"
+  adb logcat -c >/dev/null 2>&1 || true
   adb shell am instrument -w -e class com.a11yland.hissi.ScreenshotTests "$RUNNER" | tee "$log"
-  grep -q "^OK (" "$log" || { echo "error: screenshot tests failed for $language" >&2; exit 1; }
-
-  adb pull "$SHOTS_ON_DEVICE/." "$raw" >/dev/null
+  # Diagnostics first, verdict second: on a failure the shots so far, the
+  # screen the test left behind and the app's log are all there is to go on.
+  adb pull "$SHOTS_ON_DEVICE/." "$raw" >/dev/null 2>&1 || true
+  adb logcat -d > "$raw/logcat.txt"
+  grep -q "^OK (" "$log" || {
+    adb exec-out screencap -p > "$raw/failure.png"
+    echo "error: screenshot tests failed for $language" >&2
+    exit 1
+  }
   for png in "$raw"/*.png; do
     [ -e "$png" ] || { echo "error: no screenshots were written for $language" >&2; exit 1; }
     ground="$($IM "$png" -format '%[pixel:p{0,0}]' info:)"
