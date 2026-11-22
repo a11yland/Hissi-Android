@@ -107,13 +107,20 @@ the catalog before bumping anything.
 - `.github/workflows/ci.yml`: on push to `main` and on pull requests (not
   for Markdown, `docs/` or `play/` changes), runs
   `./gradlew test :app:assembleDebug` (Temurin 21). No lint, no UI tests.
-- `.github/workflows/release.yml`: manual, from `main` only. Bumps
-  `versionCode`/`versionName` in `app/build.gradle.kts`, builds the signed
-  bundle from repository secrets, tags `v<version>` and publishes a GitHub
-  release. `main` requires verified signatures, so the bump commit and tag
-  are created via the GitHub API (signed by GitHub), never `git push`. Play upload stays manual (`docs/android-distribution.md`).
-  It refuses to run while the seed or the test fixtures differ from
-  Hissi-iOS `main`.
+- `.github/workflows/release.yml`: manual. Bumps `versionCode`/`versionName`
+  in `app/build.gradle.kts`, runs the tests and builds the signed bundle
+  (AAB) and the signed APK from repository secrets, uploads AAB, APK and R8
+  mapping as the workflow artifact `hissi-<version>` and — with the
+  `publish` input on (default) — from `main` only, commits the bump, tags
+  `v<version>` and publishes a GitHub release with the three files. `main`
+  requires verified signatures, so the bump commit and tag are created via
+  the GitHub API (signed by GitHub), never `git push`. It refuses to publish
+  while the seed or the test fixtures differ from Hissi-iOS `main`. With
+  `publish` off it only builds: any branch, no commit, no tag, no release,
+  the seed check a warning — the way to get a release-signed APK of a
+  branch onto a phone. The APK carries the upload-key signature (Play
+  re-signs with the app signing key), so a Play or debug installation has
+  to go first. Play upload stays manual (`docs/android-distribution.md`).
 - `.github/workflows/seed-sync.yml` ("Seed sync"): compares `app/src/main/assets/seed-catalog.json`
   and `core/src/test/fixtures/` with Hissi-iOS `main`. On a push or pull
   request touching them it only warns; daily and on a manual run it opens or rebuilds a `seed-sync` PR

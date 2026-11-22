@@ -1,10 +1,22 @@
 name: Release
+# Manual only. Bumps the version in app/build.gradle.kts, runs the tests and
+# builds the signed release bundle (AAB, for Play) and the signed release APK
+# (for installing on a device by hand), then — with `publish` on — commits the
+# bump through the GitHub API (so GitHub signs it and it passes the
+# verified-signatures rule on main), tags it and publishes a GitHub release
+# with the AAB, the APK and the R8 mapping. Uploading to Play stays manual
+# (see docs/android-distribution.md).
+#
+# With `publish` off the run only builds: no commit, no tag, no release. The
+# files land in the workflow artifact `hissi-<version>` instead, and the run
+# may start from any branch — the way to get a release-signed build of a
+# feature branch onto a phone. The version bump happens in the runner only.
+#
+# The APK carries the upload-key signature, like a local `assembleRelease`
+# and unlike what Play hands out (Play re-signs with the app signing key), so
+# a Play or debug installation on the device has to be uninstalled before it
+# installs — and the other way round.
 
-# Manual only. Bumps the version in app/build.gradle.kts, builds the signed
-# release bundle, commits the bump through the GitHub API (so GitHub signs it
-# and it passes the verified-signatures rule on main), tags it and publishes
-# a GitHub release with the AAB and the R8 mapping. Uploading to Play stays manual (see
-# docs/android-distribution.md).
 on:
   workflow_dispatch:
     inputs:
@@ -12,6 +24,11 @@ on:
         description: "versionName for the release (e.g. 1.1). versionCode is incremented automatically."
         required: true
         type: string
+      publish:
+        description: "Commit the bump, tag v<version> and publish the GitHub release. Off: build only — AAB, APK and mapping as a workflow artifact, from any branch."
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -31,13 +48,19 @@ jobs:
       - name: Validate input and ref
         env:
           VERSION: ${{ inputs.version }}
+          PUBLISH: ${{ inputs.publish }}
         run: |
-          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
-            echo "::error::Releases are cut from main only (got $GITHUB_REF)."
-            exit 1
-          fi
           if ! [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]]; then
             echo "::error::version must look like 1.1 or 1.1.0 (got '$VERSION')."
+            exit 1
+          fi
+          # A build-only run may come from any branch and reuse a version.
+          if [ "$PUBLISH" != "true" ]; then
+            echo "Build only (publish off): no commit, no tag, no release."
+            exit 0
+          fi
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Releases are cut from main only (got $GITHUB_REF)."
             exit 1
           fi
           if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
@@ -48,6 +71,7 @@ jobs:
       # A release must not ship a seed (or test against fixtures) older than
       # Hissi-iOS main — the Seed sync workflow only warns day to day, so
       # the gate is here. Merge its sync PR (or run it manually) first.
+      # A build-only run gets the same comparison as a warning: nothing ships.
       - name: Check out the iOS originals
         uses: actions/checkout@v5
         with:
@@ -60,20 +84,27 @@ jobs:
           sparse-checkout-cone-mode: false
 
       - name: Seed and fixtures in step with Hissi-iOS
+        env:
+          PUBLISH: ${{ inputs.publish }}
         run: |
+          level=error
+          [ "$PUBLISH" = "true" ] || level=warning
           status=0
           if ! cmp -s app/src/main/assets/seed-catalog.json ios/Shared/Resources/seed-catalog.json; then
-            echo "::error::The seed catalog differs from Hissi-iOS main — merge the seed-sync PR first."
+            echo "::$level::The seed catalog differs from Hissi-iOS main — merge the seed-sync PR first."
             status=1
           fi
           if ! diff -rq core/src/test/fixtures ios/HissiTests/Tests/Fixtures; then
-            echo "::error::The test fixtures differ from Hissi-iOS main — merge the seed-sync PR first."
+            echo "::$level::The test fixtures differ from Hissi-iOS main — merge the seed-sync PR first."
             status=1
           fi
           # Out of the workspace before the build and the bump commit.
           rm -rf ios
+          [ "$PUBLISH" = "true" ] || exit 0
           exit "$status"
 
+      # In a build-only run the bump stays in the runner: the APK and AAB
+      # carry the requested version, the repository does not.
       - name: Bump versionCode and versionName
         env:
           VERSION: ${{ inputs.version }}
@@ -113,6 +144,7 @@ jobs:
             fi
           done
           [ "$missing" -eq 0 ]
+
           keystore="$RUNNER_TEMP/upload.jks"
           echo "$KEYSTORE_BASE64" | base64 -d > "$keystore"
           cat > local.properties <<EOF
@@ -124,8 +156,10 @@ jobs:
           hissi.upload.keyPassword=$KEY_PASSWORD
           EOF
 
-      - name: Unit tests and signed release bundle
-        run: ./gradlew test :app:bundleRelease
+      # Bundle and APK come from the same release build type, so one R8 run's
+      # mapping fits both.
+      - name: Unit tests, signed release bundle and APK
+        run: ./gradlew test :app:bundleRelease :app:assembleRelease
 
       - name: Collect artifacts
         env:
@@ -133,8 +167,37 @@ jobs:
         run: |
           mkdir -p dist
           cp app/build/outputs/bundle/release/app-release.aab "dist/hissi-$VERSION.aab"
+          cp app/build/outputs/apk/release/app-release.apk "dist/hissi-$VERSION.apk"
           cp app/build/outputs/mapping/release/mapping.txt "dist/hissi-$VERSION-mapping.txt"
           ls -l dist
+
+      # Always, so a failed publish step still leaves the build to pick up —
+      # and in a build-only run this is where the files are.
+      - name: Upload build as workflow artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: hissi-${{ inputs.version }}
+          path: dist/
+          if-no-files-found: error
+
+      - name: Summary
+        env:
+          VERSION: ${{ inputs.version }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          {
+            echo "## Hissi $VERSION (versionCode $VERSION_CODE)"
+            echo
+            if [ "$PUBLISH" = "true" ]; then
+              echo "Published as release \`v$VERSION\`."
+            else
+              echo "Build only: nothing committed, tagged or released. Files in the workflow artifact \`hissi-$VERSION\` (built from \`${GITHUB_REF#refs/heads/}\` @ \`${GITHUB_SHA::7}\`)."
+            fi
+            echo
+            echo "- \`hissi-$VERSION.aab\` — Play upload"
+            echo "- \`hissi-$VERSION.apk\` — install on a device (upload-key signature: uninstall a Play or debug installation first)"
+            echo "- \`hissi-$VERSION-mapping.txt\` — R8 mapping"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # main requires verified signatures, so a plain `git commit` + `git push`
       # from the runner is rejected (GH013). Commits created through the REST
@@ -142,6 +205,7 @@ jobs:
       # The tag is only created after main has moved, so a rejected update can
       # no longer leave a tag pointing at a commit that is not on main.
       - name: Commit bump and tag via GitHub API (signed)
+        if: inputs.publish
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.version }}
@@ -150,7 +214,6 @@ jobs:
           file=app/build.gradle.kts
           api="repos/$GITHUB_REPOSITORY"
           parent="$GITHUB_SHA"
-
           base_tree=$(gh api "$api/git/commits/$parent" --jq .tree.sha)
           blob=$(jq -n --rawfile content "$file" '{content: $content, encoding: "utf-8"}' \
             | gh api "$api/git/blobs" --input - --jq .sha)
@@ -162,14 +225,12 @@ jobs:
             --arg tree "$tree" --arg parent "$parent" \
             '{message: $msg, tree: $tree, parents: [$parent]}' \
             | gh api "$api/git/commits" --input - --jq .sha)
-
           verified=$(gh api "$api/git/commits/$commit" --jq .verification.verified)
           echo "Bump commit $commit (verified: $verified)"
           if [ "$verified" != "true" ]; then
             echo "::error::GitHub did not sign the bump commit; main would reject it."
             exit 1
           fi
-
           # Fast-forward only: fails if main moved since the run started.
           gh api -X PATCH "$api/git/refs/heads/main" -f sha="$commit" -F force=false >/dev/null
 
@@ -180,6 +241,7 @@ jobs:
           echo "Tagged v$VERSION -> $commit"
 
       - name: Publish GitHub release
+        if: inputs.publish
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.version }}
@@ -188,4 +250,5 @@ jobs:
             --title "Hissi $VERSION" \
             --generate-notes \
             "dist/hissi-$VERSION.aab#Release bundle (AAB, versionCode $VERSION_CODE)" \
+            "dist/hissi-$VERSION.apk#APK for installing on a device (upload-key signature, versionCode $VERSION_CODE)" \
             "dist/hissi-$VERSION-mapping.txt#R8 mapping"

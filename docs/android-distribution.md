@@ -64,10 +64,10 @@ already runs TestFlight.
       before cutting the release.
 - [ ] Run the **Release** workflow (Actions → Release → Run workflow, from
       `main`) with the new `versionName`. It increments `versionCode`,
-      runs the tests, builds the signed AAB, commits the bump, tags
-      `v<version>` and publishes a GitHub release with the AAB and the R8
-      mapping. The bump commit is created through the GitHub API with the
-      workflow token, so GitHub signs it (main requires verified
+      runs the tests, builds the signed AAB and APK, commits the bump, tags
+      `v<version>` and publishes a GitHub release with the AAB, the APK and
+      the R8 mapping. The bump commit is created through the GitHub API
+      with the workflow token, so GitHub signs it (main requires verified
       signatures) and CI does not run on it again (the release build
       already covered it).
 - [ ] Download the AAB from the GitHub release; smoke-test the release build
@@ -76,6 +76,26 @@ already runs TestFlight.
 - [ ] First time only: add the tester e-mail list (≤ 100 for internal
       testing) and share the opt-in link. Testers accept once and get every
       later build via Play automatically.
+
+## Installing a build on a device by hand
+
+The GitHub release also carries `hissi-<version>.apk`. Open the release
+page in the phone's browser, download the APK, allow the browser to install
+unknown apps once, tap it. The APK is signed with the **upload key** — the
+same signature as a local `./gradlew :app:assembleRelease`, but not the one
+Play installs (Play re-signs with the app signing key), and not the debug
+key — so a Hissi installed from Play or from Android Studio has to be
+uninstalled first (favorites are local on Android and go with it), and the
+same again when switching back. The Maps key is restricted to the upload and
+app-signing SHA-1s, so the map snippet works in this build.
+
+For a build **without** a release — a feature branch on a phone, or a dry
+run of the release build — run the workflow with `publish` **off**: it may
+start from any branch, bumps the version in the runner only, commits and
+tags nothing, and leaves AAB, APK and mapping in the workflow artifact
+`hissi-<version>` (run page → Artifacts; a published run has the same
+artifact). The seed comparison with Hissi-iOS is a warning there, not a
+gate — nothing ships.
 
 Production later: new personal accounts must first run a closed test with
 12 testers over 14 days, and the account's public legal name goes live —
