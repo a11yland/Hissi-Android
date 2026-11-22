@@ -139,8 +139,8 @@ the catalog before bumping anything.
   API 34 Pixel 4 emulator (reactivecircus/android-emulator-runner, KVM),
   uploads the shots as an artifact and, with `open_pr`, opens or rebuilds a
   `screenshots-update` PR (label `screenshots`, commit via the GitHub API)
-  that replaces the shot sets in `play/screenshots/`. Pull requests touching
-  the script, the tests or the workflow run it for artifacts only.
+  that replaces the shot sets in `play/screenshots/`. Never runs on its own:
+  an emulator run is too slow for every pull request.
   Counterpart of the Hissi-iOS Screenshots workflow.
 - `.github/workflows/seed-sync.yml` ("Seed sync"): compares `app/src/main/assets/seed-catalog.json`
   and `core/src/test/fixtures/` with Hissi-iOS `main`. On a push or pull

@@ -5,8 +5,9 @@ name: Screenshots
 # the size the Play set was shot at). Demo mode needs no API token and no
 # Maps key — the instrumented ScreenshotTests switch it on themselves.
 #
-# Every run uploads the shots as an artifact. A manual run with `open_pr`
-# (the default) then opens or rebuilds a PR from branch `screenshots-update`
+# Manual only — an emulator run is too slow and too costly to spend on every
+# pull request. Every run uploads the shots as an artifact; with `open_pr`
+# (the default) it then opens or rebuilds a PR from branch `screenshots-update`
 # (label `screenshots`) that replaces the shot languages' sets in
 # play/screenshots/ — commit made through the Git data API so GitHub signs it,
 # as in Seed sync; needs "Allow GitHub Actions to create and approve pull
@@ -23,13 +24,6 @@ on:
         description: "Open or update the screenshots PR"
         default: true
         type: boolean
-  # A change to the script, the tests or this workflow shows its effect on
-  # the PR — artifacts only, never a screenshots PR.
-  pull_request:
-    paths:
-      - "scripts/screenshots.sh"
-      - "app/src/androidTest/**"
-      - ".github/workflows/screenshots.yml"
 
 permissions:
   contents: write
@@ -45,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      LANGUAGES: ${{ github.event.inputs.languages || 'de' }}
+      LANGUAGES: ${{ inputs.languages }}
     steps:
       - uses: actions/checkout@v5
 
@@ -103,10 +97,10 @@ jobs:
 
   publish:
     needs: shoot
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.open_pr == 'true' }}
+    if: ${{ inputs.open_pr }}
     runs-on: ubuntu-latest
     env:
-      LANGUAGES: ${{ github.event.inputs.languages || 'de' }}
+      LANGUAGES: ${{ inputs.languages }}
     steps:
       - uses: actions/checkout@v5
 
