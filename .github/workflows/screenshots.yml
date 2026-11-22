@@ -1,0 +1,184 @@
+name: Screenshots
+
+# Play screenshots on a GitHub runner — the same scripts/screenshots.sh that
+# runs locally, on an Android emulator (API 34, Pixel 4 profile, 1080 x 2280:
+# the size the Play set was shot at). Demo mode needs no API token and no
+# Maps key — the instrumented ScreenshotTests switch it on themselves.
+#
+# Manual only — an emulator run is too slow and too costly to spend on every
+# pull request. Every run uploads the shots as an artifact; with `open_pr`
+# (the default) it then opens or rebuilds a PR from branch `screenshots-update`
+# (label `screenshots`) that replaces the shot languages' sets in
+# play/screenshots/ — commit made through the Git data API so GitHub signs it,
+# as in Seed sync; needs "Allow GitHub Actions to create and approve pull
+# requests". Counterpart of the Hissi-iOS Screenshots workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      languages:
+        description: "Languages, comma-separated (de = the Play listing, en = play/screenshots/en)"
+        default: de,en
+        type: string
+      open_pr:
+        description: "Open or update the screenshots PR"
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write # the screenshots label
+
+concurrency:
+  group: screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shoot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      LANGUAGES: ${{ inputs.languages }}
+    steps:
+      - uses: actions/checkout@v5
+
+      # Hardware acceleration for the emulator (the runner has KVM, the
+      # runner user just lacks access by default).
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: ImageMagick
+        run: command -v magick || command -v convert || sudo apt-get install -y imagemagick
+
+      # Build before the emulator starts, so its boot budget isn't spent
+      # waiting for Gradle.
+      - name: Build app and screenshot tests
+        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
+
+      - name: Shoot
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_4
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: scripts/screenshots.sh --lang "$LANGUAGES"
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v7
+        with:
+          name: screenshots
+          path: play/screenshots/
+          retention-days: 14
+
+      # The raw shots and the instrumentation log show what the test saw.
+      - name: Upload raw shots and logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: raw
+          path: build/screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  publish:
+    needs: shoot
+    if: ${{ inputs.open_pr }}
+    runs-on: ubuntu-latest
+    env:
+      LANGUAGES: ${{ inputs.languages }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download screenshots
+        uses: actions/download-artifact@v7
+        with:
+          name: screenshots
+          path: fresh
+
+      - name: Open or update screenshots PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          api="repos/$GITHUB_REPOSITORY"
+          branch=screenshots-update
+
+          # Tree entries: every fresh PNG of the shot languages, plus a
+          # deletion for every PNG of those sets the run no longer produces.
+          # Languages that weren't shot stay untouched.
+          entries='[]'
+          sets=""
+          for language in $(printf '%s' "$LANGUAGES" | tr ',' ' '); do
+            if [ "$language" = de ]; then sub=""; else sub="$language/"; fi
+            set_path="play/screenshots/${sub%/}"
+            set_path="${set_path%/}"
+            sets="$sets\n- \`$set_path\`"
+            for png in fresh/${sub}*.png; do
+              [ -e "$png" ] || { echo "::error::No screenshots for $language"; exit 1; }
+              # --rawfile, not --arg: Linux caps a single argument at 128 KB.
+              base64 -w0 "$png" > "$RUNNER_TEMP/blob.b64"
+              sha=$(jq -n --rawfile content "$RUNNER_TEMP/blob.b64" '{content: $content, encoding: "base64"}' \
+                | gh api "$api/git/blobs" --input - --jq .sha)
+              entries=$(jq --arg path "$set_path/$(basename "$png")" --arg sha "$sha" \
+                '. + [{path: $path, mode: "100644", type: "blob", sha: $sha}]' <<<"$entries")
+            done
+            for old in "$set_path"/*.png; do
+              [ -e "$old" ] || continue
+              [ -e "fresh/${sub}$(basename "$old")" ] && continue
+              entries=$(jq --arg path "$old" '. + [{path: $path, mode: "100644", type: "blob", sha: null}]' <<<"$entries")
+            done
+          done
+
+          base=$(gh api "$api/git/ref/heads/main" --jq .object.sha)
+          base_tree=$(gh api "$api/git/commits/$base" --jq .tree.sha)
+          tree=$(jq -n --arg base "$base_tree" --argjson entries "$entries" '{base_tree: $base, tree: $entries}' \
+            | gh api "$api/git/trees" --input - --jq .sha)
+          # No author/committer: GitHub then signs the commit as github-actions[bot].
+          commit=$(jq -n --arg tree "$tree" --arg parent "$base" \
+            '{message: "chore(play): regenerate the Play screenshots", tree: $tree, parents: [$parent]}' \
+            | gh api "$api/git/commits" --input - --jq .sha)
+
+          if gh api "$api/git/ref/heads/$branch" >/dev/null 2>&1; then
+            gh api -X PATCH "$api/git/refs/heads/$branch" -f sha="$commit" -F force=true >/dev/null
+          else
+            gh api "$api/git/refs" -f ref="refs/heads/$branch" -f sha="$commit" >/dev/null
+          fi
+
+          {
+            echo "## Regenerated Play screenshots"
+            echo
+            echo "Sets replaced:"
+            printf '%b\n' "$sets"
+            echo
+            echo "Shot in demo mode on an Android emulator (API 34, Pixel 4 profile), pillarboxed to 1080 × 1920. Check them before uploading to the Play Console."
+            echo
+            echo "---"
+            echo "Generated by the Screenshots workflow ([run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID))."
+          } > "$RUNNER_TEMP/pr.md"
+
+          gh label create screenshots --repo "$GITHUB_REPOSITORY" \
+            --description "Regenerated Play screenshots" --color 0E8A16 2>/dev/null || true
+          existing=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$branch" --state open --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh pr edit "$existing" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/pr.md"
+          else
+            gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$branch" \
+              --title "chore(play): regenerate the Play screenshots" \
+              --label screenshots \
+              --body-file "$RUNNER_TEMP/pr.md"
+          fi

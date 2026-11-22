@@ -41,6 +41,9 @@ android {
         val escapedToken = transitToken.replace("\\", "\\\\").replace("\"", "\\\"")
         buildConfigField("String", "TRANSIT_TOKEN", "\"$escapedToken\"")
         manifestPlaceholders["mapsApiKey"] = mapsApiKey
+        // Only the Play screenshot tests (scripts/screenshots.sh) are
+        // instrumented; CI's unit tests stay on the JVM in :core.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
@@ -98,4 +101,10 @@ dependencies {
     implementation(libs.reorderable)
     implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.compose.ui.tooling)
+
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
 }
