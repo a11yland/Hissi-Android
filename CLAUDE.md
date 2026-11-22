@@ -135,7 +135,7 @@ the catalog before bumping anything.
   re-signs with the app signing key), so a Play or debug installation has
   to go first. Play upload stays manual (`docs/android-distribution.md`).
 - `.github/workflows/screenshots.yml` ("Screenshots"): manual (inputs:
-  languages, default `de`; `open_pr`), runs `scripts/screenshots.sh` on an
+  languages, default `de,en`; `open_pr`), runs `scripts/screenshots.sh` on an
   API 34 Pixel 4 emulator (reactivecircus/android-emulator-runner, KVM),
   uploads the shots as an artifact and, with `open_pr`, opens or rebuilds a
   `screenshots-update` PR (label `screenshots`, commit via the GitHub API)

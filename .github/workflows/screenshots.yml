@@ -17,8 +17,8 @@ on:
   workflow_dispatch:
     inputs:
       languages:
-        description: "Languages, comma-separated (de = the Play listing)"
-        default: de
+        description: "Languages, comma-separated (de = the Play listing, en = play/screenshots/en)"
+        default: de,en
         type: string
       open_pr:
         description: "Open or update the screenshots PR"

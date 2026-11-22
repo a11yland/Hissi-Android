@@ -5,7 +5,7 @@
 # with fixed statuses, see app/src/main/kotlin/…/data/DemoMode.kt), pulls the
 # shots and pillarboxes them to the 9:16 Play requires.
 #
-#   scripts/screenshots.sh [--lang de,en]     # default: de (the Play listing)
+#   scripts/screenshots.sh [--lang de,en]     # default: de,en, as the iOS workflow
 #
 # Needs one running emulator or device (adb), Android 13+ for the per-app
 # locale — the shots were made on the Pixel 4 profile (1080 x 2280) — and
@@ -20,7 +20,7 @@
 set -eu
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
-LANGUAGES="de"
+LANGUAGES="de en"
 while [ $# -gt 0 ]; do
   case "$1" in
     --lang) LANGUAGES="$(printf '%s' "$2" | tr ',' ' ')"; shift 2 ;;

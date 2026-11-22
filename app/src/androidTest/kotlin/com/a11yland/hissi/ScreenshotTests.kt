@@ -1,8 +1,10 @@
 package com.a11yland.hissi
 
 import android.graphics.Bitmap
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -123,6 +125,12 @@ class ScreenshotTests {
         hasText(text, substring = true) or hasContentDescription(text, substring = true)
 
     private fun snap(name: String) {
+        // The on-appear refresh answers from the demo catalog, but its
+        // spinner (pull-to-refresh, toolbar button) can still be on screen.
+        compose.waitUntil(TIMEOUT) {
+            compose.onAllNodes(hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate))
+                .fetchSemanticsNodes().isEmpty()
+        }
         compose.waitForIdle()
         Thread.sleep(SETTLE_MILLIS)
         val screenshot = instrumentation.uiAutomation.takeScreenshot() ?: error("no screenshot for $name")
