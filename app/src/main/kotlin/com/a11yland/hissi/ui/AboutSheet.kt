@@ -47,12 +47,15 @@ import com.a11yland.hissi.R
 // What the data attribution points to — one place for the URLs. The
 // elevators come from accessibility.cloud; the station names and locations
 // in the bundled seed from DELFI e.V. (via gtfs.de, CC BY 4.0) and the VBB
-// (CC BY), whose licenses require naming them (iOS: AttributionLinks).
+// (CC BY), the elevators and stops of the municipal networks in NRW from
+// the VRR (CC BY 4.0) — licenses that require naming them (iOS:
+// AttributionLinks).
 object AttributionLinks {
     const val ACCESSIBILITY_CLOUD = "https://transit.accessibility.cloud"
     const val SOZIALHELDEN = "https://sozialhelden.de"
     const val GTFS_DE = "https://gtfs.de"
     const val VBB = "https://www.vbb.de"
+    const val VRR = "https://www.opendata-oepnv.de/ht/de/api"
     const val CC_BY_4 = "https://creativecommons.org/licenses/by/4.0/"
 }
 
@@ -134,6 +137,13 @@ fun AboutSheet(onDismiss: () -> Unit) {
                 LinkRow("gtfs.de") { uriHandler.openUri(AttributionLinks.GTFS_DE) }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 LinkRow("VBB") { uriHandler.openUri(AttributionLinks.VBB) }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Text(
+                    stringResource(R.string.about_vrr_detail),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                LinkRow("VRR Open Data") { uriHandler.openUri(AttributionLinks.VRR) }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 LinkRow(stringResource(R.string.about_license_cc_by)) { uriHandler.openUri(AttributionLinks.CC_BY_4) }
             }

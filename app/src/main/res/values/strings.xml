@@ -46,6 +46,7 @@
     <string name="about_data_title">Daten</string>
     <string name="about_data_detail">Die Aufzugsdaten stammen von accessibility.cloud, einem Projekt des gemeinnützigen Sozialhelden e.V.</string>
     <string name="about_stations_detail">Stationsnamen und -orte stammen von DELFI e.V. über gtfs.de (CC BY 4.0) und von der VBB Verkehrsverbund Berlin-Brandenburg GmbH (CC BY).</string>
+    <string name="about_vrr_detail">Weitere Aufzüge und Haltestellen in Nordrhein-Westfalen stammen vom Verkehrsverbund Rhein-Ruhr (VRR), CC BY 4.0.</string>
     <string name="about_license_cc_by">Lizenz CC BY 4.0</string>
     <string name="about_tagline">Aufzugstatus für Berlin, Brandenburg und Bahnhöfe der Deutschen Bahn</string>
     <string name="about_features_title">Funktionen</string>
