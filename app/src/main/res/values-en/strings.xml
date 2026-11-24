@@ -99,6 +99,11 @@
     <string name="field_status_since">Status since</string>
     <string name="field_data_age">Data as of</string>
     <string name="field_reason">Disruption reason</string>
+    <!-- Disruption reasons of the VRR source: its known status codes, in our words. -->
+    <string name="vrr_reason_no_operation">Not in operation</string>
+    <string name="vrr_reason_not_ready">Not ready for operation</string>
+    <string name="vrr_reason_remote_shutdown">Switched off remotely</string>
+    <string name="vrr_reason_passenger_rescue">Fault (passenger rescue)</string>
     <string name="field_source">Source</string>
     <string name="field_operator">Operator</string>
     <string name="value_unknown">unknown</string>

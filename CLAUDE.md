@@ -71,7 +71,17 @@ the catalog before bumping anything.
   request that `ElevatorRefresher.withHistory` makes only for favorites
   still undated, `StatusMerge` keeps a known date while the status holds;
   `sinceBucket` feeds the "seit …" line of rows and widget, the detail's
-  "Status seit" shows date and time), search (`SearchGrouping`, `SearchHighlight`,
+  "Status seit" shows date and time), the second source behind
+  `BuildConfig.FEATURE_VRR` (off; `hissi.featureVrr=true` in
+  `local.properties`): the VRR infrastructure API (NRW, CC BY 4.0) —
+  `ElevatorSource` derives the source from the id (`vrr:<resourceId>`,
+  numeric = accessibility.cloud, else legacy), `VrrClient` parses the one
+  list (status words, `statusSince` = the state's timestamp, data age = the
+  fetch time, disruption reasons only as `Explanation` codes the app words
+  itself — the feed's free text can carry staff names), `VrrApi` requests
+  it; `CatalogCache` builds from both sources, routes `equipment(ids)` by
+  source and `EquipmentCatalog.overlaid` applies its rule per source —
+  search (`SearchGrouping`, `SearchHighlight`,
   `StationAliases` — Hbf/Hauptbahnhof, Bhf/Bf/Bahnhof —,
   `TransitClassification`), `NearbyStations`, `DisruptionAlert` transition
   rules, `FavoritesOrdering`, `WelcomeGate`, and `Palette` + `WcagContrast`

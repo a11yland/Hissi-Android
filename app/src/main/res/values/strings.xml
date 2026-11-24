@@ -102,6 +102,11 @@
     <string name="field_status_since">Status seit</string>
     <string name="field_data_age">Datenstand</string>
     <string name="field_reason">Störungsgrund</string>
+    <!-- Disruption reasons of the VRR source: its known status codes, in our words. -->
+    <string name="vrr_reason_no_operation">Kein Betrieb</string>
+    <string name="vrr_reason_not_ready">Nicht betriebsbereit</string>
+    <string name="vrr_reason_remote_shutdown">Ferngesteuert abgeschaltet</string>
+    <string name="vrr_reason_passenger_rescue">Störung (Personenbefreiung)</string>
     <string name="field_source">Quelle</string>
     <string name="field_operator">Betreiber</string>
     <string name="value_unknown">unbekannt</string>
