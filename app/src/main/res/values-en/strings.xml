@@ -37,8 +37,6 @@
     <string name="move_down">Move down</string>
     <string name="moved_announcement">%1$s now at position %2$d of %3$d</string>
     <string name="checked_at">Checked %1$s</string>
-    <string name="as_of">As of %1$s</string>
-    <string name="as_of_unknown">Data age unknown</string>
     <string name="data_by">Data by</string>
     <string name="data_project_of">, a project of</string>
     <string name="about_open">About Hissi</string>
@@ -68,6 +66,16 @@
     <string name="relative_one_day">1 day ago</string>
     <string name="relative_days">%1$d days ago</string>
     <string name="relative_on_date">on %1$s</string>
+    <!-- How long a status has held; the spoken forms write the units out. -->
+    <string name="since_minutes">for %1$d min</string>
+    <string name="since_hours">for %1$d h</string>
+    <string name="since_one_day">for 1 day</string>
+    <string name="since_days">for %1$d days</string>
+    <string name="since_date">since %1$s</string>
+    <string name="since_one_minute_spoken">for 1 minute</string>
+    <string name="since_minutes_spoken">for %1$d minutes</string>
+    <string name="since_one_hour_spoken">for 1 hour</string>
+    <string name="since_hours_spoken">for %1$d hours</string>
 
     <string name="network_regional">Regional rail</string>
     <!-- Federal states (search result headers); the others are spelled the same in both languages. -->
@@ -88,6 +96,7 @@
 
     <string name="action_back">Back</string>
     <string name="field_elevator">Elevator</string>
+    <string name="field_status_since">Status since</string>
     <string name="field_data_age">Data as of</string>
     <string name="field_reason">Disruption reason</string>
     <string name="field_source">Source</string>
@@ -162,4 +171,6 @@
     <string name="whats_new_1_3_accessibility_detail">Higher contrast, more room for large text and better TalkBack support.</string>
     <string name="whats_new_1_4_germany_title">Deutsche Bahn elevators across Germany</string>
     <string name="whats_new_1_4_germany_detail">Hissi now also knows the Deutsche Bahn elevators at stations outside Berlin and Brandenburg. Search results are sorted by federal state.</string>
+    <string name="whats_new_1_5_since_title">For how long</string>
+    <string name="whats_new_1_5_since_detail">Every elevator shows how long it has been in service or out of service – in the widget too.</string>
 </resources>

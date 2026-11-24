@@ -230,6 +230,10 @@ private fun DetailFields(elevator: MonitoredElevator) {
     if (elevator.elevatorDescription.isNotEmpty()) {
         LabeledField(stringResource(R.string.field_elevator), elevator.elevatorDescription)
     }
+    // The exact moment — the row's "seit 3 Tagen" as a date and time.
+    elevator.statusSince?.let {
+        LabeledField(stringResource(R.string.field_status_since), statusSinceDateTime(it))
+    }
     LabeledField(
         stringResource(R.string.field_data_age),
         elevator.lastUpdated?.let { relativeTimeText(it) }

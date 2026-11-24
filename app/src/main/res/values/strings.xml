@@ -39,8 +39,6 @@
     <string name="move_down">Nach unten bewegen</string>
     <string name="moved_announcement">%1$s an Position %2$d von %3$d</string>
     <string name="checked_at">Geprüft %1$s</string>
-    <string name="as_of">Stand %1$s</string>
-    <string name="as_of_unknown">Stand unbekannt</string>
     <string name="data_by">Daten von</string>
     <string name="data_project_of">, einem Projekt der</string>
     <string name="about_open">Über Hissi</string>
@@ -70,6 +68,17 @@
     <string name="relative_one_day">vor 1 Tag</string>
     <string name="relative_days">vor %1$d Tagen</string>
     <string name="relative_on_date">am %1$s</string>
+    <!-- How long a status has held; the spoken forms write the units out. -->
+    <string name="since_minutes">seit %1$d Min.</string>
+    <string name="since_hours">seit %1$d Std.</string>
+    <string name="since_one_day">seit 1 Tag</string>
+    <string name="since_days">seit %1$d Tagen</string>
+    <string name="since_date">seit dem %1$s</string>
+    <string name="since_one_minute_spoken">seit 1 Minute</string>
+    <string name="since_minutes_spoken">seit %1$d Minuten</string>
+    <string name="since_one_hour_spoken">seit 1 Stunde</string>
+    <string name="since_hours_spoken">seit %1$d Stunden</string>
+    <string name="status_with_since" translatable="false">%1$s %2$s</string>
 
     <string name="network_regional">Regionalverkehr</string>
     <!-- Federal states (search result headers); the others are spelled the same in both languages. -->
@@ -90,6 +99,7 @@
 
     <string name="action_back">Zurück</string>
     <string name="field_elevator">Aufzug</string>
+    <string name="field_status_since">Status seit</string>
     <string name="field_data_age">Datenstand</string>
     <string name="field_reason">Störungsgrund</string>
     <string name="field_source">Quelle</string>
@@ -164,4 +174,6 @@
     <string name="whats_new_1_3_accessibility_detail">Höhere Kontraste, mehr Platz für große Schrift und bessere Unterstützung für TalkBack.</string>
     <string name="whats_new_1_4_germany_title">DB-Aufzüge in ganz Deutschland</string>
     <string name="whats_new_1_4_germany_detail">Hissi kennt jetzt auch die Aufzüge der Deutschen Bahn an Bahnhöfen außerhalb von Berlin und Brandenburg. Suchergebnisse sind nach Bundesland sortiert.</string>
+    <string name="whats_new_1_5_since_title">Wie lange schon</string>
+    <string name="whats_new_1_5_since_detail">Jeder Aufzug zeigt, seit wann er in Betrieb oder außer Betrieb ist – auch im Widget.</string>
 </resources>

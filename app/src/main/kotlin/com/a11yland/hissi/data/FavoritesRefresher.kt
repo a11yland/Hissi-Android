@@ -3,7 +3,6 @@ package com.a11yland.hissi.data
 import com.a11yland.hissi.core.ElevatorRefresher
 import com.a11yland.hissi.core.MonitoredElevator
 import com.a11yland.hissi.core.RefreshInterval
-import com.a11yland.hissi.core.StatusSources
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -24,14 +23,11 @@ object FavoritesRefresher {
     suspend fun refreshAll(container: AppContainer): Result {
         val current = container.favorites.load()
         if (current.isEmpty()) return Result(emptyList(), emptySet())
-        val catalog = container.catalog()
+        val sources = container.statusSources()
         // Off the main thread: equipment() may join a stale snapshot against
         // the full seed catalog before the merge.
         val (updated, failed) = withContext(Dispatchers.Default) {
-            ElevatorRefresher.refreshAll(
-                current,
-                sources = StatusSources { catalog.equipment(it) },
-            )
+            ElevatorRefresher.refreshAll(current, sources = sources)
         }
         val migrations = current.zip(updated)
             .filter { (old, new) -> old.id != new.id }

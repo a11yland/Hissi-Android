@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -35,15 +36,17 @@ fun ElevatorRow(
     val status = ElevatorStatus.from(elevator.isWorking)
     val color = statusColor(status)
     val statusText = statusLabel(status)
-    val ageText = lastUpdatedText(elevator)
+    // How long the status has held; left out while the source doesn't say —
+    // never a data age dressed up as a duration.
+    val sinceText = elevator.statusSince?.let { sinceText(it) }
+    val context = LocalContext.current
     val staleText = if (elevator.isDataStale) stringResource(R.string.status_stale) else null
     // One TalkBack element with the status spoken first (the visual order
     // leads with the station) — mirrors the iOS accessibilityLabel.
     val spokenRow = listOfNotNull(
-        statusText,
+        statusSentence(context, statusText, elevator.statusSince),
         elevator.stationName,
         elevator.elevatorDescription.takeIf { it.isNotEmpty() },
-        ageText,
         staleText,
     ).joinToString(", ")
 
@@ -76,11 +79,13 @@ fun ElevatorRow(
                 style = MaterialTheme.typography.labelMedium,
                 color = color,
             )
-            Text(
-                ageText,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
-            )
+            if (sinceText != null) {
+                Text(
+                    sinceText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline,
+                )
+            }
             if (staleText != null) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Icon(

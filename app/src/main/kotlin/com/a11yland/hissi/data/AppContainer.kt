@@ -8,6 +8,7 @@ import com.a11yland.hissi.core.CatalogCache
 import com.a11yland.hissi.core.DemoFixtures
 import com.a11yland.hissi.core.PageCountStore
 import com.a11yland.hissi.core.SeedCatalog
+import com.a11yland.hissi.core.StatusSources
 import com.a11yland.hissi.core.TransitApi
 import com.a11yland.hissi.widget.HissiWidget
 import com.a11yland.hissi.widget.NearbyWidget
@@ -28,6 +29,17 @@ class AppContainer(private val context: Context) {
     // Builds and refreshes must survive a cancelled caller (search keystrokes,
     // closed screens), so they run on this app-lifetime scope.
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // The status source of every refresh: the catalog's targeted fetch plus
+    // the span history for the "seit" of elevators no current span dates.
+    // Demo mode never touches the network — its catalog is dated already.
+    suspend fun statusSources(): StatusSources {
+        val catalog = catalog()
+        return StatusSources(
+            equipment = { catalog.equipment(it) },
+            latestSpans = if (DemoMode.isActive) null else { ids -> api.fetchLatestSpans(ids) },
+        )
+    }
 
     val api: TransitApi by lazy {
         TransitApi(

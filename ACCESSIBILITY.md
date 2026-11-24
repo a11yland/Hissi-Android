@@ -109,7 +109,8 @@ What the code already does:
   language on Android 13+ (`res/xml/locales_config.xml`).
 - **Widgets.** Both Glance widgets (`widget/HissiWidget.kt`,
   `widget/NearbyWidget.kt`) give every state one spoken sentence via
-  `contentDescription`, never show a false all-clear, and draw only palette
+  `contentDescription` (an elevator row: station, elevator, status and how
+  long it has held, units written out — "…, Außer Betrieb seit 3 Tagen"), never show a false all-clear, and draw only palette
   colours (`widget/WidgetColors.kt`), not the wallpaper-derived dynamic
   colours, so every pair on the tile is covered by `PaletteTest`.
 - **Permissions in context.** Location and notification prompts only appear

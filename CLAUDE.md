@@ -63,7 +63,15 @@ the catalog before bumping anything.
   `ElevatorStatus`, `ElevatorSummary`), the API client (`TransitApi` for
   network and pagination, `AccessibilityCloudClient` for pure parsing and
   joins), catalog handling (`CatalogCache`, `EquipmentCatalog`, `SeedCatalog`,
-  `StatusMerge`), search (`SearchGrouping`, `SearchHighlight`,
+  `StatusMerge`), the status duration (`statusSince` on `Equipment` and
+  `MonitoredElevator` — a real transition or null, never `updatedAt`: the
+  current span's start when it agrees with the status, else, via
+  `StatusHistory`, the end of the latest-started span when that is closed
+  and of another status; read from one extra `TransitApi.fetchLatestSpans`
+  request that `ElevatorRefresher.withHistory` makes only for favorites
+  still undated, `StatusMerge` keeps a known date while the status holds;
+  `sinceBucket` feeds the "seit …" line of rows and widget, the detail's
+  "Status seit" shows date and time), search (`SearchGrouping`, `SearchHighlight`,
   `StationAliases` — Hbf/Hauptbahnhof, Bhf/Bf/Bahnhof —,
   `TransitClassification`), `NearbyStations`, `DisruptionAlert` transition
   rules, `FavoritesOrdering`, `WelcomeGate`, and `Palette` + `WcagContrast`
