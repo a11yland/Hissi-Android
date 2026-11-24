@@ -115,7 +115,7 @@ What the code already does:
 - **Permissions in context.** Location and notification prompts only appear
   after a tap on the matching control, never on launch.
 
-Not present: a Wear OS module (see #5), Compose UI tests, Accessibility Test
+Not present: a Wear OS module (see [Hissi-Web#23](https://github.com/a11yland/Hissi-Web/issues/23)), Compose UI tests, Accessibility Test
 Framework checks, Android lint in CI.
 
 ## Supported environments
@@ -127,12 +127,12 @@ Framework checks, Android lint in CI.
 - Assistive technology the code is designed for: TalkBack, Switch Access,
   Voice Access, system font size and display size. None of them is covered by
   automated tests yet; checks are manual.
-- Not supported: Wear OS (#5), tablets/foldables with a dedicated layout,
+- Not supported: Wear OS ([Hissi-Web#23](https://github.com/a11yland/Hissi-Web/issues/23)), tablets/foldables with a dedicated layout,
   hardware-keyboard navigation as a tested path.
 
 ## Known barriers
 
-All open items are tracked as [issues with the `a11y` label](https://github.com/a11yland/Hissi-Android/issues?q=is%3Aissue+is%3Aopen+label%3Aa11y).
+All open items are tracked as [issues with the `a11y` and `Android` labels in Hissi-Web](https://github.com/a11yland/Hissi-Web/issues?q=is%3Aissue+is%3Aopen+label%3Aa11y+label%3AAndroid), where the issues of both apps and the website are tracked.
 
 Unverified items are marked as such; please report what you find.
 
@@ -164,8 +164,8 @@ Unverified items are marked as such; please report what you find.
   :app:assembleDebug` only, without Compose UI tests, Accessibility Test
   Framework or Android lint (`.github/workflows/ci.yml`).
 
-Related issues: #4 (OpenStreetMap as the map default) touches the map
-snippet; #5 (Wear OS) would need its own accessibility review. Closed #1 (the
+Related issues: [Hissi-Web#12](https://github.com/a11yland/Hissi-Web/issues/12) (OpenStreetMap as the map default)
+touches the map snippet; [Hissi-Web#23](https://github.com/a11yland/Hissi-Web/issues/23) (Wear OS) would need its own accessibility review. Closed #1 (the
 search field could not be left) is fixed by the close button and Back
 handling in `ui/ContentScreen.kt`.
 
@@ -194,8 +194,9 @@ handling in `ui/ContentScreen.kt`.
 
 ## Reporting process
 
-Report barriers at https://github.com/a11yland/Hissi-Android/issues.
-**Every accessibility issue must have the `a11y` label** so it can be found
+Report barriers at https://github.com/a11yland/Hissi-Web/issues — the central tracker for both
+apps and the website. **Every accessibility issue must have the `a11y` label,
+plus `Android` for this app,** so it can be found
 and triaged. If you cannot set labels yourself, start the title with "a11y:"
 and a maintainer will add the label.
 
