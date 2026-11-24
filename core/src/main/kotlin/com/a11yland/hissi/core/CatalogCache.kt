@@ -7,6 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -37,12 +38,24 @@ class CatalogCache(
     // The live fetch. Returns the joined live catalog WITHOUT the seed
     // overlay — the overlay is applied on every load.
     private val buildLive: suspend () -> List<AccessibilityCloudClient.Equipment>?,
+    // Every VRR elevator with its status (VrrApi::fetchAll); null when the
+    // request fails — or while the source is switched off.
+    private val fetchVrr: suspend () -> List<AccessibilityCloudClient.Equipment>? = { null },
+    // Which ids are part of the app (feature toggles). Applied to whatever
+    // comes back live or from disk, so switching a source off also hides
+    // what an earlier run persisted.
+    private val includes: (String) -> Boolean = { true },
 ) {
     private val mutex = Mutex()
     private var cached: List<AccessibilityCloudClient.Equipment> = emptyList()
     private var fetchedAt: Instant? = null
     private var inFlight: Deferred<List<AccessibilityCloudClient.Equipment>?>? = null
     private var diskLoaded = false
+
+    // Whether the cached catalog holds live VRR records — a build during a
+    // VRR outage caches only their status-unknown seed stand-ins, which
+    // must not answer for ten minutes as if they were fresh.
+    private var cachedHasVrr = false
 
     @Serializable
     private data class PersistedCatalog(
@@ -98,20 +111,43 @@ class CatalogCache(
     // keep their previous values upstream.
     suspend fun equipment(ids: Set<String>): Map<String, AccessibilityCloudClient.Equipment> {
         if (ids.isEmpty()) return emptyMap()
-        val (snapshot, fresh) = mutex.withLock {
+        val (snapshot, fresh, hasVrr) = mutex.withLock {
             loadDiskIfNeeded()
-            cached to (fetchedAt?.let { Duration.between(it, Instant.now()) < ttl } ?: false)
+            Triple(cached, fetchedAt?.let { Duration.between(it, Instant.now()) < ttl } ?: false, cachedHasVrr)
         }
+        val wantsVrr = ids.any { ElevatorSource.of(it) == ElevatorSource.Vrr }
         val bridged = EquipmentCatalog.bridgedLiveIds(ids, legacyIds)
         val resolved: List<AccessibilityCloudClient.Equipment>
         if (snapshot.isNotEmpty() && fresh) {
-            resolved = snapshot
+            // A fresh catalog built while VRR didn't answer holds only seed
+            // stand-ins for VRR: ask again rather than serving "unbekannt"
+            // until the cache expires.
+            val vrr = if (wantsVrr && !hasVrr) fetchVrr()?.filter { includes(it.id) }.orEmpty() else emptyList()
+            resolved = if (vrr.isEmpty()) {
+                snapshot
+            } else {
+                snapshot.filter { ElevatorSource.of(it.id) != ElevatorSource.Vrr } + EquipmentCatalog.overlaid(
+                    live = vrr,
+                    seed = seed.filter { ElevatorSource.of(it.id) == ElevatorSource.Vrr },
+                    stations = stations,
+                )
+            }
         } else {
-            val numeric = (ids.filter { ElevatorSource.of(it) == ElevatorSource.AccessibilityCloud } + bridged.values).distinct().sorted()
-            val live = if (numeric.isEmpty()) emptyList() else fetchTargeted(numeric)
-            // A failed fetch degrades to the seed: every favorite the seed
-            // knows still answers — status unknown, never a false "working".
-            resolved = EquipmentCatalog.overlaid(live = live.orEmpty(), seed = seed, stations = stations)
+            // Each source by its own means, at once: accessibility.cloud's
+            // targeted request over exactly the asked ids, VRR's whole list
+            // (its only cheap form — and it names no favorite) when a VRR id
+            // is asked for.
+            val numeric = (ids.filter { ElevatorSource.of(it) == ElevatorSource.AccessibilityCloud } + bridged.values)
+                .distinct().sorted()
+            val live = coroutineScope {
+                val accessibilityCloud = async { if (numeric.isEmpty()) emptyList() else fetchTargeted(numeric) }
+                val vrr = async { if (wantsVrr) fetchVrr() else null }
+                (accessibilityCloud.await().orEmpty() + vrr.await().orEmpty()).filter { includes(it.id) }
+            }
+            // A failed fetch degrades to the seed, per source: every
+            // favorite the seed knows still answers — status unknown, never
+            // a false "working".
+            resolved = EquipmentCatalog.overlaid(live = live, seed = seed, stations = stations)
         }
         val byId = LinkedHashMap<String, AccessibilityCloudClient.Equipment>(resolved.size)
         for (record in resolved) byId.putIfAbsent(record.id, record)
@@ -127,17 +163,29 @@ class CatalogCache(
     // cache's scope; a completed build is always safe to cache.
     private fun startBuildLocked(): Deferred<List<AccessibilityCloudClient.Equipment>?> {
         inFlight?.let { return it }
-        val build = scope.async { finishBuild(buildLive()) }
+        val build = scope.async {
+            // Both sources at once; VRR is one quick request.
+            val vrr = async { fetchVrr() }
+            finishBuild(buildLive(), vrr.await())
+        }
         inFlight = build
         return build
     }
 
+    // accessibility.cloud decides whether there is a catalog at all: without
+    // it the build fails as before and the cache stays (a catalog of
+    // status-unknown seed records must not count as fresh). A VRR outage
+    // only leaves the VRR elevators unknown — the overlay stands their seed
+    // records in.
     private suspend fun finishBuild(
-        live: List<AccessibilityCloudClient.Equipment>?,
+        accessibilityCloud: List<AccessibilityCloudClient.Equipment>?,
+        vrr: List<AccessibilityCloudClient.Equipment>?,
     ): List<AccessibilityCloudClient.Equipment>? = mutex.withLock {
         inFlight = null
-        if (live == null) return null
+        if (accessibilityCloud == null) return null
+        val live = (accessibilityCloud + vrr.orEmpty()).filter { includes(it.id) }
         cached = EquipmentCatalog.overlaid(live = live, seed = seed, stations = stations)
+        cachedHasVrr = live.any { ElevatorSource.of(it.id) == ElevatorSource.Vrr }
         fetchedAt = Instant.now()
         persist(live)
         cached
@@ -159,12 +207,17 @@ class CatalogCache(
             val persisted = runCatching {
                 json.decodeFromString<PersistedCatalog>(file.readText())
             }.getOrNull() ?: return@withContext null
-            if (persisted.live.isEmpty()) return@withContext null
-            EquipmentCatalog.overlaid(live = persisted.live, seed = seed, stations = stations) to
-                persisted.fetchedAtEpochMillis
+            val live = persisted.live.filter { includes(it.id) }
+            if (live.isEmpty()) return@withContext null
+            Triple(
+                EquipmentCatalog.overlaid(live = live, seed = seed, stations = stations),
+                persisted.fetchedAtEpochMillis,
+                live.any { ElevatorSource.of(it.id) == ElevatorSource.Vrr },
+            )
         } ?: return
         cached = loaded.first
         fetchedAt = Instant.ofEpochMilli(loaded.second)
+        cachedHasVrr = loaded.third
     }
 
     private suspend fun persist(live: List<AccessibilityCloudClient.Equipment>) {

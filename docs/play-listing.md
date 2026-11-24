@@ -37,7 +37,7 @@ Ehrlich bei Unsicherheit: Liefert eine Quelle keinen Status, zeigt Hissi „Stat
 
 Gedacht für alle, die auf Aufzüge angewiesen sind – ob mit Rollstuhl, Rollator, Kinderwagen oder schwerem Gepäck.
 
-Datenquelle: transit.accessibility.cloud. Stationsdaten: DELFI e.V. über gtfs.de (CC BY 4.0) und VBB Verkehrsverbund Berlin-Brandenburg GmbH (CC BY).
+Datenquelle: transit.accessibility.cloud. Stationsdaten: DELFI e.V. über gtfs.de (CC BY 4.0) und VBB Verkehrsverbund Berlin-Brandenburg GmbH (CC BY). Aufzüge und Haltestellen in NRW: Verkehrsverbund Rhein-Ruhr (VRR), CC BY 4.0.
 ```
 
 Note on "Kein Tracking": the app requests Google Maps/Street View snippets, a Google request carrying the station's coordinates (not the user's). If that ever feels overstated, shorten the bullet to "Kein Konto, keine Werbung."

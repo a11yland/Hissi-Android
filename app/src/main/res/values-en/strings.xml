@@ -44,6 +44,7 @@
     <string name="about_data_title">Data</string>
     <string name="about_data_detail">Elevator data comes from accessibility.cloud, a project by the non-profit Sozialhelden e.V.</string>
     <string name="about_stations_detail">Station names and locations come from DELFI e.V. via gtfs.de (CC BY 4.0) and VBB Verkehrsverbund Berlin-Brandenburg GmbH (CC BY).</string>
+    <string name="about_vrr_detail">Further elevators and stops in North Rhine-Westphalia come from Verkehrsverbund Rhein-Ruhr (VRR), CC BY 4.0.</string>
     <string name="about_license_cc_by">License CC BY 4.0</string>
     <string name="about_tagline">Elevator status for Berlin, Brandenburg and Deutsche Bahn stations</string>
     <string name="about_features_title">Features</string>
@@ -99,6 +100,11 @@
     <string name="field_status_since">Status since</string>
     <string name="field_data_age">Data as of</string>
     <string name="field_reason">Disruption reason</string>
+    <!-- Disruption reasons of the VRR source: its known status codes, in our words. -->
+    <string name="vrr_reason_no_operation">Not in operation</string>
+    <string name="vrr_reason_not_ready">Not ready for operation</string>
+    <string name="vrr_reason_remote_shutdown">Switched off remotely</string>
+    <string name="vrr_reason_passenger_rescue">Fault (passenger rescue)</string>
     <string name="field_source">Source</string>
     <string name="field_operator">Operator</string>
     <string name="value_unknown">unknown</string>

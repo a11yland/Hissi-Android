@@ -3,6 +3,7 @@ package com.a11yland.hissi.data
 import android.content.Context
 import androidx.glance.appwidget.updateAll
 import com.a11yland.hissi.BuildConfig
+import com.a11yland.hissi.R
 import com.a11yland.hissi.core.AccessibilityCloudClient
 import com.a11yland.hissi.core.CatalogCache
 import com.a11yland.hissi.core.DemoFixtures
@@ -11,6 +12,8 @@ import com.a11yland.hissi.core.PageCountStore
 import com.a11yland.hissi.core.SeedCatalog
 import com.a11yland.hissi.core.StatusSources
 import com.a11yland.hissi.core.TransitApi
+import com.a11yland.hissi.core.VrrApi
+import com.a11yland.hissi.core.VrrClient
 import com.a11yland.hissi.widget.HissiWidget
 import com.a11yland.hissi.widget.NearbyWidget
 import io.ktor.client.engine.okhttp.OkHttp
@@ -39,6 +42,25 @@ class AppContainer(private val context: Context) {
         return StatusSources(
             equipment = { catalog.equipment(it) },
             latestSpans = if (DemoMode.isActive) null else { ids -> api.fetchLatestSpans(ids) },
+        )
+    }
+
+    // The second source (VRR, NRW). Its known status codes are worded here,
+    // in the app's current language.
+    val vrrApi: VrrApi by lazy {
+        VrrApi(
+            engine = OkHttp.create(),
+            explain = { explanation ->
+                context.getString(
+                    when (explanation) {
+                        VrrClient.Explanation.NoOperation -> R.string.vrr_reason_no_operation
+                        VrrClient.Explanation.NotReady -> R.string.vrr_reason_not_ready
+                        VrrClient.Explanation.RemoteShutdown -> R.string.vrr_reason_remote_shutdown
+                        VrrClient.Explanation.PassengerRescue -> R.string.vrr_reason_passenger_rescue
+                    },
+                )
+            },
+            logger = { android.util.Log.w("HissiApi", it) },
         )
     }
 
@@ -114,16 +136,23 @@ class AppContainer(private val context: Context) {
                 readSeedAsset()?.let(SeedCatalog::parseLegacyIds).orEmpty()
             },
             scope = appScope,
+            // Demo mode serves each source its own records.
             fetchTargeted = if (DemoMode.isActive) {
                 { ids -> demoCatalog().filter { it.id in ids } }
             } else {
                 api::fetchEquipment
             },
             buildLive = if (DemoMode.isActive) {
-                { demoCatalog() }
+                { demoCatalog().filter { ElevatorSource.of(it.id) == ElevatorSource.AccessibilityCloud } }
             } else {
                 api::fetchCatalog
             },
+            fetchVrr = when {
+                !BuildConfig.FEATURE_VRR -> { -> null }
+                DemoMode.isActive -> { -> demoCatalog().filter { ElevatorSource.of(it.id) == ElevatorSource.Vrr } }
+                else -> { -> vrrApi.fetchAll() }
+            },
+            includes = { ElevatorSource.includes(it, vrrEnabled = BuildConfig.FEATURE_VRR) },
         ).also { catalogCache = it }
     }
 

@@ -21,11 +21,16 @@ object EquipmentCatalog {
     // since the generation) falls back to the station: seed records at the
     // same station name supply coordinates, region and — when they all name
     // the same one — source/operator (see stationBackfilled). Seed records
-    // only stand in for live ones when there is no live data at all
-    // (offline, or a failed targeted fetch): then the whole seed is
-    // returned, status unknown — never a false "working". With live data an
-    // elevator missing from it is gone upstream and stays out. Whatever still
-    // has no coordinate takes its station's from the `stations` list.
+    // only stand in for live ones when their source has no live data at all
+    // (offline, or a failed fetch): then that source's seed records are
+    // returned, status unknown — never a false "working". This holds per
+    // source (ElevatorSource): accessibility.cloud answering says nothing
+    // about the VRR elevators, and the other way round. With live data from
+    // its source an elevator missing from it is gone upstream and stays out.
+    // Whatever still has no coordinate takes its station's from the
+    // `stations` list. A VRR record's station name is the seed's — the
+    // generator spelled the town out and matched it to existing stations,
+    // the feed's raw name ("D-Kirchplatz U") would split the station.
     fun overlaid(
         live: List<AccessibilityCloudClient.Equipment>,
         seed: List<SeedCatalog.Record>,
@@ -37,12 +42,25 @@ object EquipmentCatalog {
         val seedByStation = seed
             .filter { stationKey(it.stationName).isNotEmpty() }
             .groupBy { stationKey(it.stationName) }
+        val answering = live.map { ElevatorSource.of(it.id) }.toSet()
+        val standIns = seed
+            .filter { ElevatorSource.of(it.id) !in answering }
+            .map { stationCoordinated(equipment(it), stationsById) }
         return live.map { equipment ->
+            val isVrr = ElevatorSource.of(equipment.id) == ElevatorSource.Vrr
             val record = seedById[equipment.id]
-                ?: return@map stationCoordinated(stationBackfilled(equipment, seedByStation), stationsById)
+            if (record == null) {
+                // A VRR lift added since the generation, at a stop the seed
+                // knows: the seed's spelling of the station, so it groups
+                // with its siblings.
+                val seedName = stationsById[equipment.stationId]?.name.orEmpty()
+                val named = if (isVrr && seedName.isNotEmpty()) equipment.copy(stationName = seedName) else equipment
+                return@map stationCoordinated(stationBackfilled(named, seedByStation), stationsById)
+            }
             // The seed's station replaces the live one only when live has
-            // none — id, name and modes travel together.
-            val hasStation = equipment.stationName.isNotEmpty()
+            // none — id, name and modes travel together. VRR is the
+            // exception: there the seed's (normalised) name always wins.
+            val hasStation = equipment.stationName.isNotEmpty() && !isVrr
             stationCoordinated(
                 equipment.copy(
                     inventoryId = equipment.inventoryId ?: record.inventoryId,
@@ -62,7 +80,7 @@ object EquipmentCatalog {
                 ),
                 stationsById,
             )
-        }
+        } + standIns
     }
 
     // A seed record as a status-unknown catalog record.
