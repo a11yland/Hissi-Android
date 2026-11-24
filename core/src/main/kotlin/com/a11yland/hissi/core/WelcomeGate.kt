@@ -12,7 +12,7 @@ object WelcomeGate {
 
     // Releases with curated notes; the note content lives with the UI — add
     // the version here and its content in `WhatsNewContent` together.
-    val curatedVersions: Set<String> = setOf("1.3", "1.4")
+    val curatedVersions: Set<String> = setOf("1.3", "1.4", "1.5")
 
     fun sheet(
         hasSeenWelcome: Boolean,

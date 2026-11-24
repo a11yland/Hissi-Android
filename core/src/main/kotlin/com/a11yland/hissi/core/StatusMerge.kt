@@ -29,6 +29,13 @@ object StatusMerge {
             stationName = equipment.stationName.ifEmpty { updated.stationName },
             elevatorDescription = equipment.description.ifEmpty { updated.elevatorDescription },
             isWorking = equipment.isWorking,
+            // "Seit": a record that names the transition wins. One that
+            // doesn't (the catalog cache carries no span history) says
+            // nothing about it — while the status is unchanged the favorite
+            // keeps what it knows, a changed status drops it rather than
+            // dating the new status with the old one's start.
+            statusSinceEpochMillis = equipment.statusSinceEpochMillis
+                ?: elevator.statusSinceEpochMillis.takeIf { equipment.isWorking == elevator.isWorking },
             lastCheckedEpochMillis = now.toEpochMilli(),
             lastUpdatedEpochMillis = equipment.lastUpdateEpochMillis,
             stateExplanation = equipment.stateExplanation,

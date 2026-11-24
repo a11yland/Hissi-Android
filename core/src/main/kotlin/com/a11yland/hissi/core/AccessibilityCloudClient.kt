@@ -49,6 +49,11 @@ object AccessibilityCloudClient {
         val description: String,
         val isWorking: Boolean? = null,
         val lastUpdateEpochMillis: Long? = null,
+        // When the current status began — a real transition time (the
+        // current span's start, or the end of the span before a span-less
+        // stretch, StatusHistory), never a record-touch time. Null when the
+        // source doesn't say: "seit …" is then left out, not guessed.
+        val statusSinceEpochMillis: Long? = null,
         val sourceName: String = "",
         val organizationName: String = "",
         val stateExplanation: String? = null,
@@ -64,6 +69,7 @@ object AccessibilityCloudClient {
         val region: TransitRegion? = null,
     ) {
         val lastUpdate: Instant? get() = lastUpdateEpochMillis?.let(Instant::ofEpochMilli)
+        val statusSince: Instant? get() = statusSinceEpochMillis?.let(Instant::ofEpochMilli)
     }
 
     // MARK: DTOs (lenient)
@@ -248,6 +254,7 @@ object AccessibilityCloudClient {
                 // when the record was last touched.
                 lastUpdateEpochMillis = (span?.start ?: span?.lastUpdate ?: elevator.lastUpdate)
                     ?.toEpochMilli(),
+                statusSinceEpochMillis = statusSince(isWorking, span, now)?.toEpochMilli(),
                 stateExplanation = if (isWorking == false) span?.reason else null,
                 latitude = elevator.latitude ?: stop?.latitude,
                 longitude = elevator.longitude ?: stop?.longitude,
@@ -264,6 +271,16 @@ object AccessibilityCloudClient {
         stopPlaces = emptyList(),
         now = now,
     )
+
+    // Since when the current status holds, as far as the current span says:
+    // its start — but only when the span agrees with the status it is quoted
+    // for (an elevator back in service whose outage span upstream hasn't
+    // closed yet says nothing about when it came back) and has begun. No
+    // fallback to an `updatedAt`: that is when a record was touched.
+    fun statusSince(isWorking: Boolean?, span: StatusSpan?, now: Instant = Instant.now()): Instant? {
+        val start = span?.start ?: return null
+        return if (span.isWorking == isWorking && start <= now) start else null
+    }
 
     // The span that covers `now`: already started (or no start) and not yet
     // ended (or no end). Several matches ⇒ the latest start wins.

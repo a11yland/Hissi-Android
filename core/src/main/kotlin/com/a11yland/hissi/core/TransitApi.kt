@@ -12,6 +12,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import java.time.Instant
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -156,6 +157,30 @@ class TransitApi(
         val data = fetchPage(ELEVATORS, extraQuery = query, page = 1, depth = 1, timeoutMillis = null)
             ?: return null
         return AccessibilityCloudClient.joinTargeted(AccessibilityCloudClient.parseElevators(data).items)
+    }
+
+    // The most recent spans of the given elevators, newest first, in one
+    // request — closed ones included, which no other fetch asks for. A
+    // working elevator has no current span; when it came back is the end of
+    // its last one (StatusHistory.since). One page: the collection averages
+    // ~6 spans per elevator, so a page holds the latest span of far more
+    // favorites than anyone keeps; an elevator crowded out of it simply stays
+    // undated. null = request failed.
+    suspend fun fetchLatestSpans(
+        elevatorIds: Set<String>,
+        now: Instant = Instant.now(),
+    ): List<AccessibilityCloudClient.StatusSpan>? {
+        val ids = elevatorIds.filter { it.toLongOrNull() != null }.sorted()
+        if (ids.isEmpty()) return emptyList()
+        val query = select(
+            listOf("elevator"), listOf("operational_status"), listOf("start_date"), listOf("end_date"),
+        ) + listOf(
+            "where[elevator][in]" to ids.joinToString(","),
+            "where[start_date][less_than_equal]" to now.truncatedTo(ChronoUnit.SECONDS).toString(),
+            "sort" to "-start_date",
+        )
+        val data = fetchPage(STATUS_SPANS, extraQuery = query, page = 1, timeoutMillis = null) ?: return null
+        return AccessibilityCloudClient.parseStatusSpans(data).items
     }
 
     // The populated span carries every span field by default — trim it to
