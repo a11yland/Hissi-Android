@@ -15,7 +15,7 @@ class DemoFixturesTest {
 
     @Test
     fun everySeedRecordKeepsItsNumericId() {
-        assertTrue(catalog.all { it.id.toLongOrNull() != null })
+        assertTrue(catalog.all { ElevatorSource.of(it.id).isLive })
         assertEquals(catalog.size, catalog.map { it.id }.toSet().size)
     }
 

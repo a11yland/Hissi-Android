@@ -77,7 +77,7 @@ class SeedCatalogTest {
         val records = SeedCatalog.parse(data)
         val stations = SeedCatalog.parseStations(data).map { it.stationId }.toSet()
         assertTrue(records.size > 1000)
-        assertTrue(records.all { it.id.toLongOrNull() != null })
+        assertTrue(records.all { ElevatorSource.of(it.id).isLive })
         assertEquals(records.size, records.map { it.id }.toSet().size)
         assertTrue(records.all { it.stationName.isNotEmpty() && it.stationId in stations })
         assertTrue(records.all { it.transitRegion != null })

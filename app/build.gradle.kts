@@ -13,6 +13,7 @@ val localProperties = Properties().apply {
     if (file.exists()) file.inputStream().use(::load)
 }
 val transitToken: String = localProperties.getProperty("hissi.transitToken") ?: ""
+val featureVrr: Boolean = localProperties.getProperty("hissi.featureVrr") == "true"
 // Maps SDK key, restricted to package + signing SHA-1 (safe inside the APK,
 // still kept out of the repo). Empty on CI — the snippet then renders blank,
 // the open-in-maps action keeps working.
@@ -40,6 +41,10 @@ android {
         // source with a cryptic compile error.
         val escapedToken = transitToken.replace("\\", "\\\\").replace("\"", "\\\"")
         buildConfigField("String", "TRANSIT_TOKEN", "\"$escapedToken\"")
+        // Feature toggle: the VRR elevators (second data source, NRW). Off
+        // until the live path ships; `hissi.featureVrr=true` in
+        // local.properties switches it on for a local build.
+        buildConfigField("boolean", "FEATURE_VRR", featureVrr.toString())
         manifestPlaceholders["mapsApiKey"] = mapsApiKey
         // Only the Play screenshot tests (scripts/screenshots.sh) are
         // instrumented; CI's unit tests stay on the JVM in :core.

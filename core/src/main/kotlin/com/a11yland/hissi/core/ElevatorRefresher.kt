@@ -58,8 +58,13 @@ object ElevatorRefresher {
         now: Instant = Instant.now(),
     ): List<MonitoredElevator> {
         val latestSpans = sources.latestSpans ?: return elevators
+        // Only accessibility.cloud keeps a span history; other sources date
+        // their statuses themselves.
         val undated = elevators
-            .filter { it.statusSinceEpochMillis == null && it.id !in skipping }
+            .filter {
+                it.statusSinceEpochMillis == null && it.id !in skipping &&
+                    ElevatorSource.of(it.id) == ElevatorSource.AccessibilityCloud
+            }
             .map { it.id }
             .toSet()
         if (undated.isEmpty()) return elevators

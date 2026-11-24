@@ -6,10 +6,10 @@ import java.text.Normalizer
 // legacy-id → live-id bridge. Ported from `Shared/EquipmentCatalog.swift`;
 // the stateful cache lives in CatalogCache.
 object EquipmentCatalog {
-    // Maps format-1 seed ids (non-numeric — favorites created from an old
+    // Maps format-1 seed ids (legacy, ElevatorSource — favorites created from an old
     // seed preview) to live ids via the seed's legacyIds. Pure, unit-tested.
     fun bridgedLiveIds(ids: Set<String>, legacyIds: Map<String, String>): Map<String, String> =
-        ids.filter { it.toLongOrNull() == null }
+        ids.filter { ElevatorSource.of(it) == ElevatorSource.Legacy }
             .mapNotNull { id -> legacyIds[id]?.let { id to it } }
             .toMap()
 

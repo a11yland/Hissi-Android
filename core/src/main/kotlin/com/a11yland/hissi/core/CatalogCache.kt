@@ -107,7 +107,7 @@ class CatalogCache(
         if (snapshot.isNotEmpty() && fresh) {
             resolved = snapshot
         } else {
-            val numeric = (ids.filter { it.toLongOrNull() != null } + bridged.values).distinct().sorted()
+            val numeric = (ids.filter { ElevatorSource.of(it) == ElevatorSource.AccessibilityCloud } + bridged.values).distinct().sorted()
             val live = if (numeric.isEmpty()) emptyList() else fetchTargeted(numeric)
             // A failed fetch degrades to the seed: every favorite the seed
             // knows still answers — status unknown, never a false "working".

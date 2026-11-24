@@ -170,7 +170,7 @@ class TransitApi(
         elevatorIds: Set<String>,
         now: Instant = Instant.now(),
     ): List<AccessibilityCloudClient.StatusSpan>? {
-        val ids = elevatorIds.filter { it.toLongOrNull() != null }.sorted()
+        val ids = elevatorIds.filter { ElevatorSource.of(it) == ElevatorSource.AccessibilityCloud }.sorted()
         if (ids.isEmpty()) return emptyList()
         val query = select(
             listOf("elevator"), listOf("operational_status"), listOf("start_date"), listOf("end_date"),

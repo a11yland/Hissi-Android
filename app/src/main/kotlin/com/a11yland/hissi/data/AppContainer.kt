@@ -6,6 +6,7 @@ import com.a11yland.hissi.BuildConfig
 import com.a11yland.hissi.core.AccessibilityCloudClient
 import com.a11yland.hissi.core.CatalogCache
 import com.a11yland.hissi.core.DemoFixtures
+import com.a11yland.hissi.core.ElevatorSource
 import com.a11yland.hissi.core.PageCountStore
 import com.a11yland.hissi.core.SeedCatalog
 import com.a11yland.hissi.core.StatusSources
@@ -132,20 +133,23 @@ class AppContainer(private val context: Context) {
 
     suspend fun demoCatalog(): List<AccessibilityCloudClient.Equipment> {
         demo?.let { return it }
-        val seed = seedRecords ?: withContext(Dispatchers.IO) {
-            readSeedAsset()?.let(SeedCatalog::parse).orEmpty()
-        }
+        val seed = seedRecords ?: readSeedRecords()
         return DemoFixtures.catalog(seed, System.currentTimeMillis(), Locale.getDefault().language)
             .also { demo = it }
     }
 
     private suspend fun loadSeedLocked(): List<SeedCatalog.Record> {
         seedRecords?.let { return it }
-        val parsed = withContext(Dispatchers.IO) {
-            readSeedAsset()?.let(SeedCatalog::parse).orEmpty()
-        }
+        val parsed = readSeedRecords()
         seedRecords = parsed
         return parsed
+    }
+
+    // The seed's elevators — the one place a source behind a feature toggle
+    // that is off is kept out (search, nearby, widgets, demo catalog alike).
+    private suspend fun readSeedRecords(): List<SeedCatalog.Record> = withContext(Dispatchers.IO) {
+        readSeedAsset()?.let(SeedCatalog::parse).orEmpty()
+            .filter { ElevatorSource.includes(it.id, vrrEnabled = BuildConfig.FEATURE_VRR) }
     }
 
     private fun readSeedAsset(): String? = runCatching {

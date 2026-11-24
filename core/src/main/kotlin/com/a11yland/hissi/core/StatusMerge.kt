@@ -17,7 +17,7 @@ object StatusMerge {
         // refreshes by its numeric id from now on. The app persists the
         // migration (favorites store id migration).
         var updated = elevator
-        if (equipment.id != elevator.id && equipment.id.toLongOrNull() != null) {
+        if (equipment.id != elevator.id && ElevatorSource.of(equipment.id).isLive) {
             updated = elevator.copy(
                 id = equipment.id,
                 stationId = equipment.stationId.ifEmpty { elevator.stationId },
