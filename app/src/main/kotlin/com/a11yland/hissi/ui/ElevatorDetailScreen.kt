@@ -40,6 +40,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
@@ -198,17 +200,32 @@ private fun DetailFields(elevator: MonitoredElevator) {
         modifier = Modifier.semantics { heading() },
     )
 
+    // Status and duration are one statement: the duration stands right
+    // under the status, in the list row's words, and TalkBack hears one
+    // sentence with the units written out ("Außer Betrieb seit 9 Stunden").
+    val statusText = statusLabel(status)
+    val since = elevator.shownStatusSince
+    val spokenStatus = statusSentence(LocalContext.current, statusText, since)
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.semantics(mergeDescendants = true) {},
+        modifier = Modifier.clearAndSetSemantics { contentDescription = spokenStatus },
     ) {
         Icon(status.icon.vector(), contentDescription = null, tint = statusSymbolColor(status))
-        Text(
-            statusLabel(status),
-            style = MaterialTheme.typography.titleMedium,
-            color = color,
-        )
+        Column {
+            Text(
+                statusText,
+                style = MaterialTheme.typography.titleMedium,
+                color = color,
+            )
+            if (since != null) {
+                Text(
+                    sinceText(since),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 
     if (elevator.isDataStale) {
@@ -230,14 +247,12 @@ private fun DetailFields(elevator: MonitoredElevator) {
     if (elevator.elevatorDescription.isNotEmpty()) {
         LabeledField(stringResource(R.string.field_elevator), elevator.elevatorDescription)
     }
-    // The exact moment — the row's "seit 3 Tagen" as a date and time.
-    elevator.statusSince?.let {
-        LabeledField(stringResource(R.string.field_status_since), statusSinceDateTime(it))
-    }
     LabeledField(
         stringResource(R.string.field_data_age),
         elevator.lastUpdated?.let { relativeTimeText(it) }
             ?: stringResource(R.string.value_unknown),
+        // Spoken with the units written out ("vor 8 Stunden").
+        spokenValue = elevator.lastUpdated?.let { relativeTimeText(it, spoken = true) },
     )
     elevator.stateExplanation?.takeIf { it.isNotEmpty() }?.let {
         LabeledField(stringResource(R.string.field_reason), it)
@@ -260,11 +275,17 @@ private fun openInMaps(context: Context, elevator: MonitoredElevator) {
 }
 
 @Composable
-private fun LabeledField(label: String, value: String) {
+private fun LabeledField(label: String, value: String, spokenValue: String? = null) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .semantics(mergeDescendants = true) {},
+            .then(
+                if (spokenValue == null) {
+                    Modifier.semantics(mergeDescendants = true) {}
+                } else {
+                    Modifier.clearAndSetSemantics { contentDescription = "$label, $spokenValue" }
+                },
+            ),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(

@@ -1,7 +1,6 @@
 package com.a11yland.hissi.ui
 
 import android.content.Context
-import android.text.format.DateFormat
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.CheckCircle
@@ -23,9 +22,6 @@ import com.a11yland.hissi.core.TransitNetwork
 import com.a11yland.hissi.core.TransitRegion
 import com.a11yland.hissi.core.WcagContrast
 import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 // UI mapping of the platform-neutral :core vocabulary: shapes onto Material
 // icons, labels onto string resources (so they follow the app language), and
@@ -83,61 +79,57 @@ fun statusLabel(status: ElevatorStatus): String = when (status) {
     ElevatorStatus.Unknown -> stringResource(R.string.status_unknown)
 }
 
-// Localized relative time off the :core buckets, e.g. "vor 3 Min." /
-// "3 min ago"; beyond a week an absolute, locale-formatted date.
+// Localized relative time off the :core ages, e.g. "vor 3 Min." / "3 min
+// ago" — always relative, never a date. `spoken` writes the short units out
+// for TalkBack.
 @Composable
-fun relativeTimeText(since: Instant): String {
-    val context = LocalContext.current
-    return when (val bucket = MonitoredElevator.relativeTimeBucket(since)) {
-        is MonitoredElevator.RelativeTimeBucket.JustNow ->
-            stringResource(R.string.relative_just_now)
-        is MonitoredElevator.RelativeTimeBucket.Minutes ->
-            stringResource(R.string.relative_minutes, bucket.minutes)
-        is MonitoredElevator.RelativeTimeBucket.Hours ->
-            stringResource(R.string.relative_hours, bucket.hours)
-        is MonitoredElevator.RelativeTimeBucket.Days ->
-            if (bucket.days == 1) stringResource(R.string.relative_one_day)
-            else stringResource(R.string.relative_days, bucket.days)
-        is MonitoredElevator.RelativeTimeBucket.OnDate -> {
-            val formatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT)
-                .withLocale(context.resources.configuration.locales[0])
-                .withZone(ZoneId.systemDefault())
-            stringResource(R.string.relative_on_date, formatter.format(bucket.date))
+fun relativeTimeText(since: Instant, spoken: Boolean = false): String =
+    when (val age = MonitoredElevator.relativeAge(since)) {
+        null -> stringResource(R.string.relative_just_now)
+        is MonitoredElevator.Age.Minutes -> when {
+            !spoken -> stringResource(R.string.relative_minutes, age.count)
+            age.count == 1 -> stringResource(R.string.relative_one_minute_spoken)
+            else -> stringResource(R.string.relative_minutes_spoken, age.count)
         }
+        is MonitoredElevator.Age.Hours -> when {
+            !spoken -> stringResource(R.string.relative_hours, age.count)
+            age.count == 1 -> stringResource(R.string.relative_one_hour_spoken)
+            else -> stringResource(R.string.relative_hours_spoken, age.count)
+        }
+        is MonitoredElevator.Age.Days ->
+            if (age.count == 1) stringResource(R.string.relative_one_day)
+            else stringResource(R.string.relative_days, age.count)
+        is MonitoredElevator.Age.Weeks -> stringResource(R.string.relative_weeks, age.count)
+        is MonitoredElevator.Age.Months -> stringResource(R.string.relative_months, age.count)
+        is MonitoredElevator.Age.Years -> stringResource(R.string.relative_years, age.count)
     }
-}
 
-// How long a status has held, off the :core buckets: "seit 3 Tagen" /
-// "for 3 days", from two weeks on a date ("seit dem 12. November"). `spoken`
-// writes the units out for TalkBack. Context-based rather than @Composable:
-// the Glance widget formats the same line.
+// How long a status has held, off the :core ages: "seit 3 Tagen" / "for 3
+// days" — always relative. `spoken` writes the short units out for TalkBack.
+// Context-based rather than @Composable: the Glance widget formats the same
+// line.
 fun sinceText(
     context: Context,
     since: Instant,
     now: Instant = Instant.now(),
     spoken: Boolean = false,
-): String = when (val bucket = MonitoredElevator.sinceBucket(since, now)) {
-    is MonitoredElevator.SinceBucket.Minutes -> when {
-        !spoken -> context.getString(R.string.since_minutes, bucket.minutes)
-        bucket.minutes == 1 -> context.getString(R.string.since_one_minute_spoken)
-        else -> context.getString(R.string.since_minutes_spoken, bucket.minutes)
+): String = when (val age = MonitoredElevator.sinceAge(since, now)) {
+    is MonitoredElevator.Age.Minutes -> when {
+        !spoken -> context.getString(R.string.since_minutes, age.count)
+        age.count == 1 -> context.getString(R.string.since_one_minute_spoken)
+        else -> context.getString(R.string.since_minutes_spoken, age.count)
     }
-    is MonitoredElevator.SinceBucket.Hours -> when {
-        !spoken -> context.getString(R.string.since_hours, bucket.hours)
-        bucket.hours == 1 -> context.getString(R.string.since_one_hour_spoken)
-        else -> context.getString(R.string.since_hours_spoken, bucket.hours)
+    is MonitoredElevator.Age.Hours -> when {
+        !spoken -> context.getString(R.string.since_hours, age.count)
+        age.count == 1 -> context.getString(R.string.since_one_hour_spoken)
+        else -> context.getString(R.string.since_hours_spoken, age.count)
     }
-    is MonitoredElevator.SinceBucket.Days ->
-        if (bucket.days == 1) context.getString(R.string.since_one_day)
-        else context.getString(R.string.since_days, bucket.days)
-    is MonitoredElevator.SinceBucket.OnDate -> {
-        val locale = context.resources.configuration.locales[0]
-        // Day and written-out month in the locale's own order ("12.
-        // November" / "November 12"), the year only when it isn't this one.
-        val pattern = DateFormat.getBestDateTimePattern(locale, if (bucket.withYear) "dMMMMyyyy" else "dMMMM")
-        val formatter = DateTimeFormatter.ofPattern(pattern, locale).withZone(ZoneId.systemDefault())
-        context.getString(R.string.since_date, formatter.format(bucket.date))
-    }
+    is MonitoredElevator.Age.Days ->
+        if (age.count == 1) context.getString(R.string.since_one_day)
+        else context.getString(R.string.since_days, age.count)
+    is MonitoredElevator.Age.Weeks -> context.getString(R.string.since_weeks, age.count)
+    is MonitoredElevator.Age.Months -> context.getString(R.string.since_months, age.count)
+    is MonitoredElevator.Age.Years -> context.getString(R.string.since_years, age.count)
 }
 
 @Composable
@@ -150,14 +142,6 @@ fun sinceText(since: Instant, spoken: Boolean = false): String =
 fun statusSentence(context: Context, statusLabel: String, since: Instant?, now: Instant = Instant.now()): String =
     since?.let { context.getString(R.string.status_with_since, statusLabel, sinceText(context, it, now, spoken = true)) }
         ?: statusLabel
-
-// The exact moment a status began, for the detail's "Status seit" field.
-@Composable
-fun statusSinceDateTime(since: Instant): String =
-    DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
-        .withLocale(LocalContext.current.resources.configuration.locales[0])
-        .withZone(ZoneId.systemDefault())
-        .format(since)
 
 // Federal state header in the search results; names spelled the same in
 // German and English stay literals, like the network names.

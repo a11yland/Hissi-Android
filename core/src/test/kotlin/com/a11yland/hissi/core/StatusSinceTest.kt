@@ -7,7 +7,6 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import java.time.Instant
-import java.time.ZoneId
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -102,64 +101,88 @@ class StatusSinceJoinTest {
     }
 }
 
-// "In Betrieb seit": the end of the span before, read off the span history.
+// "Außer Betrieb seit": the start of the span running now. The status
+// request itself carries no current span, so the spans are asked for.
 class StatusHistoryTest {
     private val spans = AccessibilityCloudClient.parseStatusSpans(fixtureData("status_history")).items
 
     private fun spansOf(id: String) = spans.filter { id in it.elevatorIds }
 
-    // out_of_service → unknown → in service: the latest span's end is the
-    // moment the elevator came back.
+    // 7400: an out_of_service span without an end, after a closed one.
     @Test
-    fun closedLatestSpanOfAnotherStatusGivesItsEnd() {
+    fun runningSpanDatesTheDisruption() {
         assertEquals(
-            instant("2026-06-24T12:44:23.502Z"),
-            StatusHistory.since(isWorking = true, spans = spansOf("7349"), now = fixtureNow),
+            instant("2026-06-20T07:00:00.000Z"),
+            StatusHistory.since(isWorking = false, spans = spansOf("7400"), now = fixtureNow),
         )
     }
 
-    // An open outage span while the elevator reports working: unclear, so
-    // no date — never the end of an older span.
+    // Upstream gives a running span a planned end a month ahead — it still
+    // runs now.
     @Test
-    fun openLatestSpanGivesNothing() {
-        assertNull(StatusHistory.since(isWorking = true, spans = spansOf("7400"), now = fixtureNow))
+    fun plannedEndInTheFutureStillCounts() {
+        val start = instant("2026-06-26T06:52:35Z")
+        val running = AccessibilityCloudClient.StatusSpan(
+            elevatorIds = listOf("1"), isWorking = false, start = start, end = instant("2026-07-26T06:52:35Z"),
+        )
+        assertEquals(start, StatusHistory.since(isWorking = false, spans = listOf(running), now = fixtureNow))
     }
 
+    // An unknown status is dated the same way, from an "unknown" span.
     @Test
-    fun closedLatestSpanOfTheSameStatusGivesNothing() {
+    fun unknownStatusIsDatedFromItsRunningSpan() {
+        val start = instant("2026-06-27T02:19:09Z")
+        val running = AccessibilityCloudClient.StatusSpan(elevatorIds = listOf("1"), isWorking = null, start = start)
+        assertEquals(start, StatusHistory.since(isWorking = null, spans = listOf(running), now = fixtureNow))
+    }
+
+    // How long a lift has been working is not shown — and not derived.
+    @Test
+    fun workingElevatorsAreNeverDated() {
+        assertNull(StatusHistory.since(isWorking = true, spans = spansOf("7349"), now = fixtureNow))
         assertNull(StatusHistory.since(isWorking = true, spans = spansOf("7401"), now = fixtureNow))
+    }
+
+    // The last span has ended (7349) or is of another status: the elevator
+    // moved on and upstream hasn't caught up — no date, never a guess.
+    @Test
+    fun endedOrDisagreeingSpanDatesNothing() {
+        assertNull(StatusHistory.since(isWorking = false, spans = spansOf("7349"), now = fixtureNow))
+        assertNull(StatusHistory.since(isWorking = null, spans = spansOf("7400"), now = fixtureNow))
     }
 
     @Test
     fun spansThatHaveNotStartedAreIgnored() {
-        val past = AccessibilityCloudClient.StatusSpan(
-            elevatorIds = listOf("1"), isWorking = false,
-            start = instant("2026-06-01T00:00:00Z"), end = instant("2026-06-02T00:00:00Z"),
+        val running = AccessibilityCloudClient.StatusSpan(
+            elevatorIds = listOf("1"), isWorking = false, start = instant("2026-06-01T00:00:00Z"),
         )
         val planned = AccessibilityCloudClient.StatusSpan(
             elevatorIds = listOf("1"), isWorking = false, start = fixtureNow.plusSeconds(86_400),
         )
-        assertEquals(past.end, StatusHistory.since(isWorking = true, spans = listOf(planned, past), now = fixtureNow))
+        assertEquals(
+            running.start,
+            StatusHistory.since(isWorking = false, spans = listOf(planned, running), now = fixtureNow),
+        )
     }
 
     @Test
-    fun noHistoryGivesNothing() {
-        assertNull(StatusHistory.since(isWorking = true, spans = emptyList(), now = fixtureNow))
+    fun noSpansGiveNothing() {
+        assertNull(StatusHistory.since(isWorking = false, spans = emptyList(), now = fixtureNow))
     }
 
     @Test
     fun appliedFillsOnlyWhatIsUndated() {
-        fun favorite(id: String, since: Instant? = null) = MonitoredElevator(
+        fun favorite(id: String, isWorking: Boolean? = false, since: Instant? = null) = MonitoredElevator(
             id = id, stationId = "1", elevatorId = id, stationName = "S", elevatorDescription = "",
-            isWorking = true, statusSinceEpochMillis = since?.toEpochMilli(),
+            isWorking = isWorking, statusSinceEpochMillis = since?.toEpochMilli(),
         )
         val known = instant("2026-01-01T00:00:00Z")
         val result = StatusHistory.applied(
-            listOf(favorite("7349"), favorite("7349", since = known), favorite("7402")),
+            listOf(favorite("7400"), favorite("7400", since = known), favorite("7402"), favorite("7400", isWorking = true)),
             spans = spans, now = fixtureNow,
         )
         assertEquals(
-            listOf(instant("2026-06-24T12:44:23.502Z"), known, null),
+            listOf(instant("2026-06-20T07:00:00.000Z"), known, null, null),
             result.map { it.statusSince },
         )
     }
@@ -205,32 +228,31 @@ class StatusSinceMergeTest {
     }
 }
 
-// The history costs at most one extra request, and none in the steady state.
+// Dating disruptions costs at most one extra request, and none in the
+// steady state — or for favorites that work.
 class StatusSinceRefreshTest {
     private val requests = mutableListOf<Set<String>>()
-    private val cameBack = instant("2026-06-24T12:44:23.502Z")
+    private val brokeAt = instant("2026-06-20T07:00:00Z")
     private val known = instant("2026-06-01T00:00:00Z")
 
-    private fun favorite(id: String, since: Instant? = null) = MonitoredElevator(
+    private fun favorite(id: String, isWorking: Boolean? = false, since: Instant? = null) = MonitoredElevator(
         id = id, stationId = "1", elevatorId = id, stationName = "S", elevatorDescription = "",
-        isWorking = true, statusSinceEpochMillis = since?.toEpochMilli(),
+        isWorking = isWorking, statusSinceEpochMillis = since?.toEpochMilli(),
     )
 
-    private fun equipment(id: String, since: Instant? = null) = AccessibilityCloudClient.Equipment(
-        id = id, stationId = "1", stationName = "S", description = "", isWorking = true,
-        statusSinceEpochMillis = since?.toEpochMilli(),
-    )
+    private fun equipment(id: String, isWorking: Boolean? = false, since: Instant? = null) =
+        AccessibilityCloudClient.Equipment(
+            id = id, stationId = "1", stationName = "S", description = "", isWorking = isWorking,
+            statusSinceEpochMillis = since?.toEpochMilli(),
+        )
 
-    private val history = listOf(
-        AccessibilityCloudClient.StatusSpan(
-            elevatorIds = listOf("7349"), isWorking = false,
-            start = instant("2026-06-23T08:34:36Z"), end = cameBack,
-        ),
+    private val running = listOf(
+        AccessibilityCloudClient.StatusSpan(elevatorIds = listOf("7400"), isWorking = false, start = brokeAt),
     )
 
     private fun sources(
         equipment: List<AccessibilityCloudClient.Equipment>,
-        spans: List<AccessibilityCloudClient.StatusSpan>? = history,
+        spans: List<AccessibilityCloudClient.StatusSpan>? = running,
         asksHistory: Boolean = true,
     ) = StatusSources(
         equipment = { _ -> equipment.associateBy { it.id } },
@@ -245,17 +267,23 @@ class StatusSinceRefreshTest {
     )
 
     @Test
-    fun oneRequestForExactlyTheUndatedFavorites() = runTest {
+    fun oneRequestForExactlyTheUndatedDisruptions() = runTest {
         val (updated, _) = ElevatorRefresher.refreshAll(
-            listOf(favorite("7349"), favorite("102", since = known), favorite("103")),
-            sources(listOf(equipment("7349"), equipment("102"), equipment("103"))),
+            listOf(
+                favorite("7400"), favorite("102", since = known), favorite("103"),
+                favorite("104", isWorking = true),
+            ),
+            sources(
+                listOf(equipment("7400"), equipment("102"), equipment("103"), equipment("104", isWorking = true)),
+            ),
         )
-        assertEquals(listOf(setOf("7349", "103")), requests)
-        assertEquals(listOf(cameBack, known, null), updated.map { it.statusSince })
+        // Not the dated one, not the working one.
+        assertEquals(listOf(setOf("7400", "103")), requests)
+        assertEquals(listOf(brokeAt, known, null, null), updated.map { it.statusSince })
     }
 
     @Test
-    fun noRequestWhenEveryStatusIsDated() = runTest {
+    fun noRequestWhenEveryDisruptionIsDated() = runTest {
         ElevatorRefresher.refreshAll(
             listOf(favorite("101", since = known), favorite("102")),
             sources(listOf(equipment("101"), equipment("102", since = known))),
@@ -264,9 +292,18 @@ class StatusSinceRefreshTest {
     }
 
     @Test
-    fun failedHistoryRequestChangesNothing() = runTest {
+    fun workingFavoritesCostNoRequest() = runTest {
+        ElevatorRefresher.refreshAll(
+            listOf(favorite("101", isWorking = true), favorite("102", isWorking = true)),
+            sources(listOf(equipment("101", isWorking = true), equipment("102", isWorking = true))),
+        )
+        assertTrue(requests.isEmpty())
+    }
+
+    @Test
+    fun failedSpanRequestChangesNothing() = runTest {
         val (updated, failed) = ElevatorRefresher.refreshAll(
-            listOf(favorite("7349")), sources(listOf(equipment("7349")), spans = null),
+            listOf(favorite("7400")), sources(listOf(equipment("7400")), spans = null),
         )
         assertNull(updated.first().statusSince)
         assertNotNull(updated.first().lastChecked)
@@ -277,15 +314,15 @@ class StatusSinceRefreshTest {
     @Test
     fun unansweredFavoritesAreNotAskedAbout() = runTest {
         ElevatorRefresher.refreshAll(
-            listOf(favorite("7349"), favorite("999")), sources(listOf(equipment("7349"))),
+            listOf(favorite("7400"), favorite("999")), sources(listOf(equipment("7400"))),
         )
-        assertEquals(listOf(setOf("7349")), requests)
+        assertEquals(listOf(setOf("7400")), requests)
     }
 
     @Test
     fun sourcesWithoutHistoryNeverAsk() = runTest {
         val (updated, _) = ElevatorRefresher.refreshAll(
-            listOf(favorite("7349")), sources(listOf(equipment("7349")), asksHistory = false),
+            listOf(favorite("7400")), sources(listOf(equipment("7400")), asksHistory = false),
         )
         assertTrue(requests.isEmpty())
         assertNull(updated.first().statusSince)
@@ -332,13 +369,12 @@ class LatestSpansRequestTest {
     }
 }
 
-// "Seit": how long a status has held. Fixed `now` and zone.
+// "Seit": how long a status has held — always relative. Fixed `now`.
 class SinceLabelTest {
     private val now = instant("2026-11-24T12:00:00Z")
-    private val zone = ZoneId.of("Europe/Berlin")
 
     private fun label(minutes: Double, spoken: Boolean = false) = MonitoredElevator.sinceLabel(
-        now.minusSeconds((minutes * 60).toLong()), now = now, spoken = spoken, zone = zone,
+        now.minusSeconds((minutes * 60).toLong()), now = now, spoken = spoken,
     )
 
     @Test
@@ -367,16 +403,14 @@ class SinceLabelTest {
         assertEquals("seit 13 Tagen", label(14 * 1440 - 1.0))
     }
 
-    // From the stale threshold on, a date says more than a day count.
+    // Never a date: weeks, then months, then years.
     @Test
-    fun twoWeeksAndMoreNameTheDate() {
-        assertEquals("seit dem 10. November", label(14 * 1440.0))
-        assertEquals("seit dem 15. Oktober", label(40 * 1440.0))
-    }
-
-    @Test
-    fun anotherYearIsNamed() {
-        assertEquals("seit dem 20. Oktober 2025", label(400 * 1440.0))
+    fun weeksMonthsAndYears() {
+        assertEquals("seit 2 Wochen", label(14 * 1440.0))
+        assertEquals("seit 5 Wochen", label(40 * 1440.0))
+        assertEquals("seit 2 Monaten", label(60 * 1440.0))
+        assertEquals("seit 13 Monaten", label(400 * 1440.0))
+        assertEquals("seit 2 Jahren", label(730 * 1440.0))
     }
 
     @Test
@@ -386,5 +420,18 @@ class SinceLabelTest {
         assertEquals("seit 1 Stunde", label(60.0, spoken = true))
         assertEquals("seit 3 Stunden", label(180.0, spoken = true))
         assertEquals("seit 3 Tagen", label(3 * 1440.0, spoken = true))
+    }
+
+    // The duration is shown for disruptions only — never for a lift that
+    // works, however long it has.
+    @Test
+    fun durationIsShownForDisruptionsOnly() {
+        fun dated(isWorking: Boolean?) = MonitoredElevator(
+            id = "1", stationId = "1", elevatorId = "1", stationName = "S", elevatorDescription = "",
+            isWorking = isWorking, statusSinceEpochMillis = now.toEpochMilli(),
+        )
+        assertEquals(now, dated(false).shownStatusSince)
+        assertEquals(now, dated(null).shownStatusSince)
+        assertNull(dated(true).shownStatusSince)
     }
 }

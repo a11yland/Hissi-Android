@@ -64,14 +64,17 @@ the catalog before bumping anything.
   network and pagination, `AccessibilityCloudClient` for pure parsing and
   joins), catalog handling (`CatalogCache`, `EquipmentCatalog`, `SeedCatalog`,
   `StatusMerge`), the status duration (`statusSince` on `Equipment` and
-  `MonitoredElevator` — a real transition or null, never `updatedAt`: the
-  current span's start when it agrees with the status, else, via
-  `StatusHistory`, the end of the latest-started span when that is closed
-  and of another status; read from one extra `TransitApi.fetchLatestSpans`
-  request that `ElevatorRefresher.withHistory` makes only for favorites
-  still undated, `StatusMerge` keeps a known date while the status holds;
-  `sinceBucket` feeds the "seit …" line of rows and widget, the detail's
-  "Status seit" shows date and time), search (`SearchGrouping`, `SearchHighlight`,
+  `MonitoredElevator` — a real transition or null, never `updatedAt`; shown
+  for disruptions only, `shownStatusSince`: the current span's start when
+  it agrees with the status, else, via `StatusHistory`, the start of the
+  span running now — upstream serves `current_status_span` empty and gives
+  a running span a planned end a month ahead; read from one extra
+  `TransitApi.fetchLatestSpans` request that `ElevatorRefresher.withHistory`
+  makes only for favorites that are not working and still undated,
+  `StatusMerge` keeps a known date while the status holds; times are always
+  relative, never a date — `MonitoredElevator.Age`: minutes, hours, days
+  for two weeks, then weeks, months, years — for "seit …" in rows, detail
+  and widget and for "Datenstand"/"Geprüft" alike), search (`SearchGrouping`, `SearchHighlight`,
   `StationAliases` — Hbf/Hauptbahnhof, Bhf/Bf/Bahnhof —,
   `TransitClassification`), `NearbyStations`, `DisruptionAlert` transition
   rules, `FavoritesOrdering`, `WelcomeGate`, and `Palette` + `WcagContrast`

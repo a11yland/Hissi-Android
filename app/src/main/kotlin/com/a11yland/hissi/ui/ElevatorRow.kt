@@ -38,13 +38,13 @@ fun ElevatorRow(
     val statusText = statusLabel(status)
     // How long the status has held; left out while the source doesn't say —
     // never a data age dressed up as a duration.
-    val sinceText = elevator.statusSince?.let { sinceText(it) }
+    val sinceText = elevator.shownStatusSince?.let { sinceText(it) }
     val context = LocalContext.current
     val staleText = if (elevator.isDataStale) stringResource(R.string.status_stale) else null
     // One TalkBack element with the status spoken first (the visual order
     // leads with the station) — mirrors the iOS accessibilityLabel.
     val spokenRow = listOfNotNull(
-        statusSentence(context, statusText, elevator.statusSince),
+        statusSentence(context, statusText, elevator.shownStatusSince),
         elevator.stationName,
         elevator.elevatorDescription.takeIf { it.isNotEmpty() },
         staleText,

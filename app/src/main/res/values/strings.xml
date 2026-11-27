@@ -67,13 +67,21 @@
     <string name="relative_hours">vor %1$d Std.</string>
     <string name="relative_one_day">vor 1 Tag</string>
     <string name="relative_days">vor %1$d Tagen</string>
-    <string name="relative_on_date">am %1$s</string>
+    <string name="relative_weeks">vor %1$d Wochen</string>
+    <string name="relative_months">vor %1$d Monaten</string>
+    <string name="relative_years">vor %1$d Jahren</string>
+    <string name="relative_one_minute_spoken">vor 1 Minute</string>
+    <string name="relative_minutes_spoken">vor %1$d Minuten</string>
+    <string name="relative_one_hour_spoken">vor 1 Stunde</string>
+    <string name="relative_hours_spoken">vor %1$d Stunden</string>
     <!-- How long a status has held; the spoken forms write the units out. -->
     <string name="since_minutes">seit %1$d Min.</string>
     <string name="since_hours">seit %1$d Std.</string>
     <string name="since_one_day">seit 1 Tag</string>
     <string name="since_days">seit %1$d Tagen</string>
-    <string name="since_date">seit dem %1$s</string>
+    <string name="since_weeks">seit %1$d Wochen</string>
+    <string name="since_months">seit %1$d Monaten</string>
+    <string name="since_years">seit %1$d Jahren</string>
     <string name="since_one_minute_spoken">seit 1 Minute</string>
     <string name="since_minutes_spoken">seit %1$d Minuten</string>
     <string name="since_one_hour_spoken">seit 1 Stunde</string>
@@ -99,7 +107,6 @@
 
     <string name="action_back">Zurück</string>
     <string name="field_elevator">Aufzug</string>
-    <string name="field_status_since">Status seit</string>
     <string name="field_data_age">Datenstand</string>
     <string name="field_reason">Störungsgrund</string>
     <string name="field_source">Quelle</string>
@@ -175,5 +182,5 @@
     <string name="whats_new_1_4_germany_title">DB-Aufzüge in ganz Deutschland</string>
     <string name="whats_new_1_4_germany_detail">Hissi kennt jetzt auch die Aufzüge der Deutschen Bahn an Bahnhöfen außerhalb von Berlin und Brandenburg. Suchergebnisse sind nach Bundesland sortiert.</string>
     <string name="whats_new_1_5_since_title">Wie lange schon</string>
-    <string name="whats_new_1_5_since_detail">Jeder Aufzug zeigt, seit wann er in Betrieb oder außer Betrieb ist – auch im Widget.</string>
+    <string name="whats_new_1_5_since_detail">Gestörte Aufzüge zeigen, seit wann sie außer Betrieb sind – auch im Widget.</string>
 </resources>

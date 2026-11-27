@@ -2,10 +2,6 @@ package com.a11yland.hissi.core
 
 import java.time.Duration
 import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
-import java.util.Locale
 import kotlinx.serialization.Serializable
 
 // Ported from `Shared/MonitoredElevator.swift`. @Serializable with default
@@ -71,107 +67,94 @@ data class MonitoredElevator(
     val lastUpdatedLabel: String
         get() = lastUpdated?.let { "Stand ${relativeTime(since = it)}" } ?: "Stand unbekannt"
 
-    // The bucketing behind the relative-time label, exposed so the UI layer
-    // can localize each bucket via string resources while the German label
-    // below stays the canonical vocabulary (and the fixture-tested one).
-    sealed interface RelativeTimeBucket {
-        data object JustNow : RelativeTimeBucket
-        data class Minutes(val minutes: Int) : RelativeTimeBucket
-        data class Hours(val hours: Int) : RelativeTimeBucket
-        data class Days(val days: Int) : RelativeTimeBucket
-        data class OnDate(val date: Instant) : RelativeTimeBucket
-    }
+    // Since when the current status holds, as far as it is shown: only for
+    // a status that is not "in Betrieb". How long an outage has lasted is
+    // what matters; a working lift needs no duration. Null also while the
+    // source doesn't say when the status began.
+    val shownStatusSince: Instant? get() = if (isWorking == true) null else statusSince
 
-    // The bucketing behind the "seit …" label, localized by the UI layer
-    // like RelativeTimeBucket.
-    sealed interface SinceBucket {
-        data class Minutes(val minutes: Int) : SinceBucket
-        data class Hours(val hours: Int) : SinceBucket
-        data class Days(val days: Int) : SinceBucket
-        data class OnDate(val date: Instant, val withYear: Boolean) : SinceBucket
+    // An age in the coarsest unit that still says something. Times are
+    // always shown relative — never as a date: days for two weeks, then
+    // weeks, months and years. The UI layer localizes each case via string
+    // resources; the German labels below are the test vocabulary.
+    sealed interface Age {
+        data class Minutes(val count: Int) : Age
+        data class Hours(val count: Int) : Age
+        data class Days(val count: Int) : Age
+        data class Weeks(val count: Int) : Age
+        data class Months(val count: Int) : Age
+        data class Years(val count: Int) : Age
+
+        companion object {
+            fun of(minutes: Int): Age {
+                val days = minutes / 1440
+                return when {
+                    minutes < 60 -> Minutes(minutes)
+                    minutes < 1440 -> Hours(minutes / 60)
+                    days < 14 -> Days(days)
+                    days < 60 -> Weeks(days / 7)
+                    days < 730 -> Months(days / 30)
+                    else -> Years(days / 365)
+                }
+            }
+        }
     }
 
     companion object {
         const val STALE_AFTER_DAYS: Int = 14
 
-        // How long a status has held. A day count says how serious an outage
-        // is — for two weeks; past that (the stale threshold) a date says
-        // more than "seit 40 Tagen", with the year when it isn't this one.
-        // Under a minute — or a start slightly ahead of this device's clock —
-        // counts as one minute: "seit 0 Min." says nothing.
-        fun sinceBucket(
-            since: Instant,
-            now: Instant = Instant.now(),
-            zone: ZoneId = ZoneId.systemDefault(),
-        ): SinceBucket {
-            val minutes = maxOf(1, Duration.between(since, now).toMinutes().toInt())
-            return when {
-                minutes < 60 -> SinceBucket.Minutes(minutes)
-                minutes < 1440 -> SinceBucket.Hours(minutes / 60)
-                minutes < STALE_AFTER_DAYS * 1440 -> SinceBucket.Days(minutes / 1440)
-                else -> SinceBucket.OnDate(
-                    since,
-                    withYear = since.atZone(zone).year != now.atZone(zone).year,
-                )
-            }
+        // How long ago a moment was; null = under a minute ("gerade eben").
+        fun relativeAge(since: Instant, now: Instant = Instant.now()): Age? {
+            val minutes = Duration.between(since, now).toMinutes().toInt()
+            return if (minutes < 1) null else Age.of(minutes)
         }
+
+        // How long a status has held. Under a minute — or a start slightly
+        // ahead of this device's clock — counts as one minute: "seit 0 Min."
+        // says nothing.
+        fun sinceAge(since: Instant, now: Instant = Instant.now()): Age =
+            Age.of(maxOf(1, Duration.between(since, now).toMinutes().toInt()))
+
+        // "gerade eben" / "vor 3 Min." / "vor 2 Std." / "vor 3 Tagen" / "vor 5
+        // Wochen" / "vor 4 Monaten" / "vor 2 Jahren"; `spoken` writes the
+        // short units out for TalkBack.
+        fun relativeTime(since: Instant, now: Instant = Instant.now(), spoken: Boolean = false): String =
+            when (val age = relativeAge(since, now)) {
+                null -> "gerade eben"
+                is Age.Minutes -> when {
+                    !spoken -> "vor ${age.count} Min."
+                    age.count == 1 -> "vor 1 Minute"
+                    else -> "vor ${age.count} Minuten"
+                }
+                is Age.Hours -> when {
+                    !spoken -> "vor ${age.count} Std."
+                    age.count == 1 -> "vor 1 Stunde"
+                    else -> "vor ${age.count} Stunden"
+                }
+                is Age.Days -> if (age.count == 1) "vor 1 Tag" else "vor ${age.count} Tagen"
+                is Age.Weeks -> "vor ${age.count} Wochen"
+                is Age.Months -> "vor ${age.count} Monaten"
+                is Age.Years -> "vor ${age.count} Jahren"
+            }
 
         // "seit 5 Min." / "seit 3 Std." / "seit 1 Tag" / "seit 3 Tagen" /
-        // "seit dem 12. November"; `spoken` writes the units out for
-        // TalkBack. The German test vocabulary, as with relativeTime.
-        fun sinceLabel(
-            since: Instant,
-            now: Instant = Instant.now(),
-            spoken: Boolean = false,
-            zone: ZoneId = ZoneId.systemDefault(),
-        ): String = when (val bucket = sinceBucket(since, now, zone)) {
-            is SinceBucket.Minutes -> when {
-                !spoken -> "seit ${bucket.minutes} Min."
-                bucket.minutes == 1 -> "seit 1 Minute"
-                else -> "seit ${bucket.minutes} Minuten"
-            }
-            is SinceBucket.Hours -> when {
-                !spoken -> "seit ${bucket.hours} Std."
-                bucket.hours == 1 -> "seit 1 Stunde"
-                else -> "seit ${bucket.hours} Stunden"
-            }
-            is SinceBucket.Days -> if (bucket.days == 1) "seit 1 Tag" else "seit ${bucket.days} Tagen"
-            is SinceBucket.OnDate -> {
-                val pattern = if (bucket.withYear) "d. MMMM yyyy" else "d. MMMM"
-                val formatter = DateTimeFormatter.ofPattern(pattern, Locale.GERMAN).withZone(zone)
-                "seit dem ${formatter.format(bucket.date)}"
-            }
-        }
-
-        // Beyond a week an absolute date — some sources go stale for months
-        // and huge relative values are meaningless.
-        fun relativeTimeBucket(since: Instant, now: Instant = Instant.now()): RelativeTimeBucket {
-            val minutes = Duration.between(since, now).toMinutes().toInt()
-            return when {
-                minutes < 1 -> RelativeTimeBucket.JustNow
-                minutes < 60 -> RelativeTimeBucket.Minutes(minutes)
-                minutes < 1440 -> RelativeTimeBucket.Hours(minutes / 60)
-                minutes < 7 * 1440 -> RelativeTimeBucket.Days(minutes / 1440)
-                else -> RelativeTimeBucket.OnDate(since)
-            }
-        }
-
-        // Localized relative time, e.g. "gerade eben" / "vor 3 Min." /
-        // "vor 2 Std." / "vor 3 Tagen" / "am 12.12.2024". German literals
-        // double as the localization keys, as on iOS.
-        fun relativeTime(since: Instant, now: Instant = Instant.now()): String =
-            when (val bucket = relativeTimeBucket(since, now)) {
-                is RelativeTimeBucket.JustNow -> "gerade eben"
-                is RelativeTimeBucket.Minutes -> "vor ${bucket.minutes} Min."
-                is RelativeTimeBucket.Hours -> "vor ${bucket.hours} Std."
-                is RelativeTimeBucket.Days ->
-                    if (bucket.days == 1) "vor 1 Tag" else "vor ${bucket.days} Tagen"
-                is RelativeTimeBucket.OnDate -> {
-                    val formatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT)
-                        .withLocale(Locale.getDefault())
-                        .withZone(ZoneId.systemDefault())
-                    "am ${formatter.format(bucket.date)}"
+        // "seit 5 Wochen" / "seit 4 Monaten" / "seit 2 Jahren".
+        fun sinceLabel(since: Instant, now: Instant = Instant.now(), spoken: Boolean = false): String =
+            when (val age = sinceAge(since, now)) {
+                is Age.Minutes -> when {
+                    !spoken -> "seit ${age.count} Min."
+                    age.count == 1 -> "seit 1 Minute"
+                    else -> "seit ${age.count} Minuten"
                 }
+                is Age.Hours -> when {
+                    !spoken -> "seit ${age.count} Std."
+                    age.count == 1 -> "seit 1 Stunde"
+                    else -> "seit ${age.count} Stunden"
+                }
+                is Age.Days -> if (age.count == 1) "seit 1 Tag" else "seit ${age.count} Tagen"
+                is Age.Weeks -> "seit ${age.count} Wochen"
+                is Age.Months -> "seit ${age.count} Monaten"
+                is Age.Years -> "seit ${age.count} Jahren"
             }
     }
 }

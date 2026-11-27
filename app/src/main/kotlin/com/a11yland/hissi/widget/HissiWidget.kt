@@ -305,7 +305,7 @@ private fun ElevatorRow(elevator: MonitoredElevator) {
     val spoken = listOf(
         elevator.stationName,
         elevator.elevatorDescription,
-        statusSentence(context, statusLabel(context, status), elevator.statusSince),
+        statusSentence(context, statusLabel(context, status), elevator.shownStatusSince),
     )
         .filter { it.isNotEmpty() }
         .joinToString(", ")
@@ -348,7 +348,7 @@ private fun ElevatorRow(elevator: MonitoredElevator) {
                 shortStatusLabel(context, status),
                 style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, color = color),
             )
-            elevator.statusSince?.let {
+            elevator.shownStatusSince?.let {
                 Text(
                     sinceText(context, it),
                     style = TextStyle(fontSize = 11.sp, color = widgetSecondaryText),

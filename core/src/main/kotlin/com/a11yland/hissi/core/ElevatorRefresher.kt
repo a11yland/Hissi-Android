@@ -46,11 +46,11 @@ object ElevatorRefresher {
         return Result(withHistory(updated, sources, skipping = failed), failed)
     }
 
-    // Dates the statuses that are still undated ("seit") from the span
-    // history: at most one extra request, and only when something lacks the
-    // date — a favorite whose status didn't change keeps the one it has
-    // (StatusMerge), so the steady state asks nothing. A failed request
-    // changes nothing.
+    // Dates the disruptions that are still undated ("seit") from the spans:
+    // at most one extra request, and only when a favorite that is not
+    // working lacks the date — one whose status didn't change keeps the one
+    // it has (StatusMerge), and working favorites are never dated, so the
+    // steady state asks nothing. A failed request changes nothing.
     suspend fun withHistory(
         elevators: List<MonitoredElevator>,
         sources: StatusSources,
@@ -59,7 +59,7 @@ object ElevatorRefresher {
     ): List<MonitoredElevator> {
         val latestSpans = sources.latestSpans ?: return elevators
         val undated = elevators
-            .filter { it.statusSinceEpochMillis == null && it.id !in skipping }
+            .filter { it.isWorking != true && it.statusSinceEpochMillis == null && it.id !in skipping }
             .map { it.id }
             .toSet()
         if (undated.isEmpty()) return elevators
