@@ -31,6 +31,7 @@
     <string name="no_results">No results for “%1$s”</string>
 
     <string name="sort">Sort</string>
+    <string name="order_broken_first">Disruptions first</string>
     <string name="order_recently_added">Recently added</string>
     <string name="order_manual">Custom order</string>
     <string name="move_up">Move up</string>
@@ -180,4 +181,6 @@
     <string name="whats_new_1_4_germany_detail">Hissi now also knows the Deutsche Bahn elevators at stations outside Berlin and Brandenburg. Search results are sorted by federal state.</string>
     <string name="whats_new_1_5_since_title">For how long</string>
     <string name="whats_new_1_5_since_detail">Elevators that are out of service show for how long – in the widget too.</string>
+    <string name="whats_new_1_5_order_title">Disruptions first</string>
+    <string name="whats_new_1_5_order_detail">Elevators that are out of service now come first in your favorites. You can find the previous order in the sort menu.</string>
 </resources>

@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -104,6 +105,7 @@ private fun WhatsNewContent(version: String) {
             }
             "1.5" -> {
                 FeatureRow(Icons.Filled.Schedule, R.string.whats_new_1_5_since_title, R.string.whats_new_1_5_since_detail)
+                FeatureRow(Icons.Filled.SwapVert, R.string.whats_new_1_5_order_title, R.string.whats_new_1_5_order_detail)
             }
             else -> Unit
         }

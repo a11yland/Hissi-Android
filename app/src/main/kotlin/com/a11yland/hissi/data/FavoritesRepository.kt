@@ -1,6 +1,7 @@
 package com.a11yland.hissi.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -22,6 +23,7 @@ private val Context.favoritesDataStore by preferencesDataStore(name = "favorites
 class FavoritesRepository(private val context: Context) {
     private val key = stringPreferencesKey("favoriteElevators")
     private val orderKey = stringPreferencesKey("favoritesOrder")
+    private val brokenFirstAdoptedKey = booleanPreferencesKey("favoritesOrderBrokenFirstAdopted")
     private val json = Json { ignoreUnknownKeys = true }
 
     suspend fun load(): List<MonitoredElevator> {
@@ -36,6 +38,24 @@ class FavoritesRepository(private val context: Context) {
         context.favoritesDataStore.data.first()[orderKey]
             ?.let { stored -> FavoritesOrder.entries.firstOrNull { it.name == stored } }
             ?: FavoritesOrder.DEFAULT
+
+    // One-time upgrade step (1.5): "Störungen zuerst" became the default.
+    // "Zuletzt hinzugefügt" used to be the only automatic order, so a list
+    // in it — stored explicitly or by default — moves to the new default
+    // once. A manual order is the user's and stays; the former order remains
+    // selectable in the sort menu.
+    suspend fun adoptBrokenFirstDefaultIfNeeded() {
+        context.favoritesDataStore.edit { preferences ->
+            if (preferences[brokenFirstAdoptedKey] == true) return@edit
+            preferences[brokenFirstAdoptedKey] = true
+            if (preferences[orderKey] == FavoritesOrder.MANUAL.name) return@edit
+            preferences[orderKey] = FavoritesOrder.BROKEN_FIRST.name
+            val stored = preferences[key]?.let { value ->
+                runCatching { json.decodeFromString<List<MonitoredElevator>>(value) }.getOrNull()
+            } ?: return@edit
+            preferences[key] = json.encodeToString(FavoritesOrdering.byBrokenFirst(stored))
+        }
+    }
 
     // Switching the mode re-sorts what is stored, so the list stays the
     // displayed order for every write that follows.
@@ -70,8 +90,10 @@ class FavoritesRepository(private val context: Context) {
     ): List<MonitoredElevator> = update { stored ->
         val byId = refreshed.associateBy { it.id }
         FavoritesOps.migrated(stored, migrations).map { favorite ->
-            // The favorite stays authoritative for placement — the refresh
-            // supplies the status, not the position or the add time.
+            // The favorite stays authoritative for its identity in the list
+            // — the refresh supplies the status, not the add time. (Where
+            // the row then stands is the order's business: "Störungen zuerst"
+            // re-sorts by the fresh statuses in `update`.)
             byId[favorite.id]?.copy(
                 elevatorIndex = favorite.elevatorIndex,
                 addedAtEpochMillis = favorite.addedAtEpochMillis,
@@ -89,7 +111,15 @@ class FavoritesRepository(private val context: Context) {
                 runCatching { json.decodeFromString<List<MonitoredElevator>>(value) }
                     .getOrDefault(emptyList())
             } ?: emptyList()
-            result = transform(stored)
+            // "Störungen zuerst" depends on the statuses, so every write —
+            // a refresh above all, but also an added favorite — re-derives
+            // it: the stored list stays the displayed order.
+            val effective = order
+                ?: preferences[orderKey]?.let { name -> FavoritesOrder.entries.firstOrNull { it.name == name } }
+                ?: FavoritesOrder.DEFAULT
+            result = transform(stored).let {
+                if (effective == FavoritesOrder.BROKEN_FIRST) FavoritesOrdering.byBrokenFirst(it) else it
+            }
             preferences[key] = json.encodeToString(result)
             if (order != null) preferences[orderKey] = order.name
         }

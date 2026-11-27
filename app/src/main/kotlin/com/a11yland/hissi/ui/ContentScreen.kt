@@ -745,6 +745,7 @@ private fun SortMenu(monitor: MonitorViewModel) {
 
 private val FavoritesOrder.labelRes: Int
     get() = when (this) {
+        FavoritesOrder.BROKEN_FIRST -> R.string.order_broken_first
         FavoritesOrder.RECENTLY_ADDED -> R.string.order_recently_added
         FavoritesOrder.MANUAL -> R.string.order_manual
     }

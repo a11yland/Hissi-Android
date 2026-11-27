@@ -80,7 +80,12 @@ the catalog before bumping anything.
   and widget and for "Datenstand"/"Geprüft" alike), search (`SearchGrouping`, `SearchHighlight`,
   `StationAliases` — Hbf/Hauptbahnhof, Bhf/Bf/Bahnhof —,
   `TransitClassification`), `NearbyStations`, `DisruptionAlert` transition
-  rules, `FavoritesOrdering`, `WelcomeGate`, and `Palette` + `WcagContrast`
+  rules, `FavoritesOrdering` (default `BROKEN_FIRST`, "Störungen zuerst":
+  out of service, unknown, working, newest first within each group; it
+  depends on the statuses, so `FavoritesRepository.update` re-derives it on
+  every write, a refresh included; `RECENTLY_ADDED`, the former default,
+  and `MANUAL` stay selectable; a list not in manual order moves to the new
+  default once, `adoptBrokenFirstDefaultIfNeeded`), `WelcomeGate`, and `Palette` + `WcagContrast`
   (colours as hex strings so tests can compute contrast). Tests in
   `core/src/test` run against JSON fixtures in `core/src/test/fixtures/`
   shared with the iOS tests; do not edit fixtures here without the iOS side.

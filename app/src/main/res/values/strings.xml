@@ -33,6 +33,7 @@
     <string name="no_results">Keine Ergebnisse für „%1$s“</string>
 
     <string name="sort">Sortieren</string>
+    <string name="order_broken_first">Störungen zuerst</string>
     <string name="order_recently_added">Zuletzt hinzugefügt</string>
     <string name="order_manual">Eigene Reihenfolge</string>
     <string name="move_up">Nach oben bewegen</string>
@@ -183,4 +184,6 @@
     <string name="whats_new_1_4_germany_detail">Hissi kennt jetzt auch die Aufzüge der Deutschen Bahn an Bahnhöfen außerhalb von Berlin und Brandenburg. Suchergebnisse sind nach Bundesland sortiert.</string>
     <string name="whats_new_1_5_since_title">Wie lange schon</string>
     <string name="whats_new_1_5_since_detail">Gestörte Aufzüge zeigen, seit wann sie außer Betrieb sind – auch im Widget.</string>
+    <string name="whats_new_1_5_order_title">Störungen zuerst</string>
+    <string name="whats_new_1_5_order_detail">Aufzüge außer Betrieb stehen in deinen Favoriten jetzt oben. Die bisherige Reihenfolge findest du im Sortieren-Menü.</string>
 </resources>
