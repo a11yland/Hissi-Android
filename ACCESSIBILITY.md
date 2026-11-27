@@ -36,7 +36,12 @@ What the code already does:
   browser. Label/value pairs on the detail screen and notice cards are merged
   into one element.
 - **Screen structure.** The detail screen announces itself through a pane
-  title and carries the station name as a heading; the nearby block's title
+  title and carries the station name as a heading. The heading is spoken
+  from the app bar's title slot (invisible there; the visible headline
+  below the bar carries no semantics), so TalkBack reads back, station,
+  favorite star, status — the same order as VoiceOver on iOS. The TalkBack
+  focus frame for the heading therefore sits in the bar, above the visible
+  name; the nearby block's title
   is a heading (`ui/ElevatorDetailScreen.kt`, `ui/NearbySection.kt`).
 - **No drag-only interaction for assistive technology.** Favorites can be
   reordered by long-press drag, and the rows also offer "Nach oben
@@ -109,7 +114,8 @@ What the code already does:
   language on Android 13+ (`res/xml/locales_config.xml`).
 - **Widgets.** Both Glance widgets (`widget/HissiWidget.kt`,
   `widget/NearbyWidget.kt`) give every state one spoken sentence via
-  `contentDescription`, never show a false all-clear, and draw only palette
+  `contentDescription` (an elevator row: station, elevator, status and how
+  long it has held, units written out — "…, Außer Betrieb seit 3 Tagen"), never show a false all-clear, and draw only palette
   colours (`widget/WidgetColors.kt`), not the wallpaper-derived dynamic
   colours, so every pair on the tile is covered by `PaletteTest`.
 - **Permissions in context.** Location and notification prompts only appear

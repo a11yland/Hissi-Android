@@ -149,6 +149,12 @@ class TransitApi(
             listOf("location", "centroid"), listOf("location", "stopPlaceCentroid"),
             listOf("operational_status", "operational_status"),
             listOf("operational_status", "current_status_span"),
+            // The elevator's newest spans, inline (a join field). Upstream
+            // leaves `current_status_span` empty (verified live 2026-11-27),
+            // so this is where the targeted request gets the span running
+            // now — the disruption's text and its start — without a second
+            // request.
+            listOf("operational_status", "status_spans"),
             listOf("linked_data", "operator_inventory_id"),
             listOf("elevator_type"), listOf("stop_place_name"),
             listOf("internal_description"), listOf("updatedAt"),

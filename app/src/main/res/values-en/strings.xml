@@ -31,14 +31,13 @@
     <string name="no_results">No results for “%1$s”</string>
 
     <string name="sort">Sort</string>
+    <string name="order_broken_first">Disruptions first</string>
     <string name="order_recently_added">Recently added</string>
     <string name="order_manual">Custom order</string>
     <string name="move_up">Move up</string>
     <string name="move_down">Move down</string>
     <string name="moved_announcement">%1$s now at position %2$d of %3$d</string>
     <string name="checked_at">Checked %1$s</string>
-    <string name="as_of">As of %1$s</string>
-    <string name="as_of_unknown">Data age unknown</string>
     <string name="data_by">Data by</string>
     <string name="data_project_of">, a project of</string>
     <string name="about_open">About Hissi</string>
@@ -67,7 +66,25 @@
     <string name="relative_hours">%1$d h ago</string>
     <string name="relative_one_day">1 day ago</string>
     <string name="relative_days">%1$d days ago</string>
-    <string name="relative_on_date">on %1$s</string>
+    <string name="relative_weeks">%1$d weeks ago</string>
+    <string name="relative_months">%1$d months ago</string>
+    <string name="relative_years">%1$d years ago</string>
+    <string name="relative_one_minute_spoken">1 minute ago</string>
+    <string name="relative_minutes_spoken">%1$d minutes ago</string>
+    <string name="relative_one_hour_spoken">1 hour ago</string>
+    <string name="relative_hours_spoken">%1$d hours ago</string>
+    <!-- How long a status has held; the spoken forms write the units out. -->
+    <string name="since_minutes">for %1$d min</string>
+    <string name="since_hours">for %1$d h</string>
+    <string name="since_one_day">for 1 day</string>
+    <string name="since_days">for %1$d days</string>
+    <string name="since_weeks">for %1$d weeks</string>
+    <string name="since_months">for %1$d months</string>
+    <string name="since_years">for %1$d years</string>
+    <string name="since_one_minute_spoken">for 1 minute</string>
+    <string name="since_minutes_spoken">for %1$d minutes</string>
+    <string name="since_one_hour_spoken">for 1 hour</string>
+    <string name="since_hours_spoken">for %1$d hours</string>
 
     <string name="network_regional">Regional rail</string>
     <!-- Federal states (search result headers); the others are spelled the same in both languages. -->
@@ -162,4 +179,12 @@
     <string name="whats_new_1_3_accessibility_detail">Higher contrast, more room for large text and better TalkBack support.</string>
     <string name="whats_new_1_4_germany_title">Deutsche Bahn elevators across Germany</string>
     <string name="whats_new_1_4_germany_detail">Hissi now also knows the Deutsche Bahn elevators at stations outside Berlin and Brandenburg. Search results are sorted by federal state.</string>
+    <string name="whats_new_1_5_since_title">For how long</string>
+    <string name="whats_new_1_5_since_detail">Elevators that are out of service show for how long – in the widget too.</string>
+    <string name="whats_new_1_5_order_title">Disruptions first</string>
+    <string name="whats_new_1_5_order_detail">Elevators that are out of service now come first in your favorites. You can find the previous order in the sort menu.</string>
+    <string name="whats_new_1_5_reason_title">Reason for the disruption</string>
+    <string name="whats_new_1_5_reason_detail">Your favorites now reliably say why an elevator is out of service.</string>
+    <string name="whats_new_1_5_data_title">Updated elevator data</string>
+    <string name="whats_new_1_5_data_detail">Some elevators have more precise descriptions, for example with the street name and the direction of travel.</string>
 </resources>

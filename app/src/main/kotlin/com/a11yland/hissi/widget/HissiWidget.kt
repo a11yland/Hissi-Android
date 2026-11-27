@@ -48,6 +48,8 @@ import com.a11yland.hissi.core.ElevatorSummary
 import com.a11yland.hissi.core.MonitoredElevator
 import com.a11yland.hissi.core.StatusIcon
 import com.a11yland.hissi.data.FavoritesRefresher
+import com.a11yland.hissi.ui.sinceText
+import com.a11yland.hissi.ui.statusSentence
 
 class HissiWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = HissiWidget()
@@ -299,7 +301,12 @@ private fun ElevatorRow(elevator: MonitoredElevator) {
     val status = ElevatorStatus.from(elevator.isWorking)
     val color = statusColor(elevator.isWorking)
     // One row, one sentence for TalkBack.
-    val spoken = listOf(elevator.stationName, elevator.elevatorDescription, statusLabel(context, status))
+    // The status with its duration ("Außer Betrieb seit 3 Tagen").
+    val spoken = listOf(
+        elevator.stationName,
+        elevator.elevatorDescription,
+        statusSentence(context, statusLabel(context, status), elevator.shownStatusSince),
+    )
         .filter { it.isNotEmpty() }
         .joinToString(", ")
     Row(
@@ -335,10 +342,19 @@ private fun ElevatorRow(elevator: MonitoredElevator) {
             }
         }
         Spacer(GlanceModifier.width(8.dp))
-        Text(
-            shortStatusLabel(context, status),
-            style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, color = color),
-        )
+        // Status over its duration, next to the station block.
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                shortStatusLabel(context, status),
+                style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, color = color),
+            )
+            elevator.shownStatusSince?.let {
+                Text(
+                    sinceText(context, it),
+                    style = TextStyle(fontSize = 11.sp, color = widgetSecondaryText),
+                )
+            }
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 package com.a11yland.hissi.core
 
+
 // Driven port for the refresh orchestration: the status source as an
 // injectable function. The app wires up the real catalog
 // (CatalogCache::equipment); tests substitute a stub, which is what makes the
@@ -10,6 +11,11 @@ data class StatusSources(
     // never one request per favorite, never a full catalog build. Keys of the
     // result = the requested ids.
     val equipment: suspend (Set<String>) -> Map<String, AccessibilityCloudClient.Equipment>,
+    // Whether the records come with the bundled seed overlaid — then their
+    // source and operator names are the whole truth and replace what a
+    // favorite carries, an empty name included (StatusMerge). The app always
+    // has the seed; the default is for callers without one.
+    val metadataIsComplete: Boolean = false,
 )
 
 // Refreshes all favorites in one catalog batch. transit.accessibility.cloud
@@ -34,7 +40,7 @@ object ElevatorRefresher {
                 failed.add(elevator.id)
                 elevator
             } else {
-                StatusMerge.apply(equipment, elevator)
+                StatusMerge.apply(equipment, elevator, replacingMetadata = sources.metadataIsComplete)
             }
         }
         return Result(updated, failed)

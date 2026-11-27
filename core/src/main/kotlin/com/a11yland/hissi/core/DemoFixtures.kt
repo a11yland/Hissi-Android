@@ -49,6 +49,13 @@ object DemoFixtures {
             // Spread the "Stand" times over the last three hours; a
             // disruption is older than that.
             val minutesAgo = if (isBroken) 26 * 60 else 8 + (index * 37) % 170
+            // "Seit": the disruption began with its "Stand"; working lifts
+            // have been running for days, an unknown status is recent.
+            val sinceMinutesAgo = when {
+                isBroken -> minutesAgo
+                isUnknown -> 2 * 60
+                else -> (2 + index % 19) * 1440
+            }
             AccessibilityCloudClient.Equipment(
                 id = record.id,
                 inventoryId = record.inventoryId,
@@ -58,6 +65,7 @@ object DemoFixtures {
                 description = record.description,
                 isWorking = if (isUnknown) null else !isBroken,
                 lastUpdateEpochMillis = if (isUnknown) null else nowMillis - minutesAgo * MINUTE_MILLIS,
+                statusSinceEpochMillis = nowMillis - sinceMinutesAgo * MINUTE_MILLIS,
                 sourceName = record.sourceName,
                 organizationName = record.organizationName,
                 stateExplanation = if (isBroken) explanation(language) else null,
@@ -84,6 +92,7 @@ object DemoFixtures {
             isWorking = equipment.isWorking,
             lastCheckedEpochMillis = nowMillis,
             lastUpdatedEpochMillis = equipment.lastUpdateEpochMillis,
+            statusSinceEpochMillis = equipment.statusSinceEpochMillis,
             sourceName = equipment.sourceName,
             organizationName = equipment.organizationName,
             stateExplanation = equipment.stateExplanation,

@@ -72,6 +72,9 @@ class MonitorViewModel(private val container: AppContainer) : ViewModel() {
 
     init {
         viewModelScope.launch {
+            // Before the first read: a list in the former default order moves
+            // to "Störungen zuerst" once.
+            container.favorites.adoptBrokenFirstDefaultIfNeeded()
             _favorites.value = container.favorites.load()
             _order.value = container.favorites.loadOrder()
             _pendingOnboarding.value = container.onboarding.pendingSheet()

@@ -49,6 +49,11 @@ object AccessibilityCloudClient {
         val description: String,
         val isWorking: Boolean? = null,
         val lastUpdateEpochMillis: Long? = null,
+        // When the current status began — a real transition time (the
+        // current span's start, or the end of the span before a span-less
+        // stretch), never a record-touch time. Null when the
+        // source doesn't say: "seit …" is then left out, not guessed.
+        val statusSinceEpochMillis: Long? = null,
         val sourceName: String = "",
         val organizationName: String = "",
         val stateExplanation: String? = null,
@@ -64,6 +69,7 @@ object AccessibilityCloudClient {
         val region: TransitRegion? = null,
     ) {
         val lastUpdate: Instant? get() = lastUpdateEpochMillis?.let(Instant::ofEpochMilli)
+        val statusSince: Instant? get() = statusSinceEpochMillis?.let(Instant::ofEpochMilli)
     }
 
     // MARK: DTOs (lenient)
@@ -78,6 +84,10 @@ object AccessibilityCloudClient {
         // The current span as a populated object — only in targeted (depth=1)
         // responses; null when the relation is a bare id.
         val inlineStatusSpan: StatusSpan? = null,
+        // operational_status.status_spans — the elevator's newest spans as
+        // populated objects, again only in targeted (depth=1) responses. The
+        // one running now is found by `currentSpan`, like in the list join.
+        val inlineSpans: List<StatusSpan> = emptyList(),
         val inventoryId: String? = null,          // linked_data.operator_inventory_id
         val stopPlaceName: String? = null,        // cached stop name, fallback only
         val lastUpdate: Instant? = null,
@@ -170,6 +180,11 @@ object AccessibilityCloudClient {
             // A keyed object is a populated (depth=1) relation — a bare id
             // must not masquerade as a span.
             inlineStatusSpan = (status?.get("current_status_span") as? JsonObject)?.let(::parseStatusSpan),
+            // A join field: {"docs": […], "hasNextPage": …}. At depth=0 the
+            // docs are bare ids, which are not spans — none, then.
+            inlineSpans = ((status?.get("status_spans") as? JsonObject)?.get("docs") as? JsonArray)
+                .orEmpty()
+                .mapNotNull { (it as? JsonObject)?.let(::parseStatusSpan) },
             inventoryId = linked?.let { Lenient.string(it, listOf("operator_inventory_id")) },
             stopPlaceName = Lenient.localizedText(json, listOf("stop_place_name")),
             lastUpdate = date(Lenient.string(json, listOf("updatedAt"))),
@@ -248,6 +263,7 @@ object AccessibilityCloudClient {
                 // when the record was last touched.
                 lastUpdateEpochMillis = (span?.start ?: span?.lastUpdate ?: elevator.lastUpdate)
                     ?.toEpochMilli(),
+                statusSinceEpochMillis = statusSince(isWorking, span, now)?.toEpochMilli(),
                 stateExplanation = if (isWorking == false) span?.reason else null,
                 latitude = elevator.latitude ?: stop?.latitude,
                 longitude = elevator.longitude ?: stop?.longitude,
@@ -260,10 +276,20 @@ object AccessibilityCloudClient {
     // elevators instead of from a separate list. Pure, unit-tested.
     fun joinTargeted(elevators: List<Elevator>, now: Instant = Instant.now()): List<Equipment> = join(
         elevators = elevators,
-        statusSpans = elevators.mapNotNull { it.inlineStatusSpan },
+        statusSpans = elevators.flatMap { listOfNotNull(it.inlineStatusSpan) + it.inlineSpans },
         stopPlaces = emptyList(),
         now = now,
     )
+
+    // Since when the current status holds, as far as the current span says:
+    // its start — but only when the span agrees with the status it is quoted
+    // for (an elevator back in service whose outage span upstream hasn't
+    // closed yet says nothing about when it came back) and has begun. No
+    // fallback to an `updatedAt`: that is when a record was touched.
+    fun statusSince(isWorking: Boolean?, span: StatusSpan?, now: Instant = Instant.now()): Instant? {
+        val start = span?.start ?: return null
+        return if (span.isWorking == isWorking && start <= now) start else null
+    }
 
     // The span that covers `now`: already started (or no start) and not yet
     // ended (or no end). Several matches ⇒ the latest start wins.

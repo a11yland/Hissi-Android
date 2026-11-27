@@ -8,6 +8,7 @@ import com.a11yland.hissi.core.CatalogCache
 import com.a11yland.hissi.core.DemoFixtures
 import com.a11yland.hissi.core.PageCountStore
 import com.a11yland.hissi.core.SeedCatalog
+import com.a11yland.hissi.core.StatusSources
 import com.a11yland.hissi.core.TransitApi
 import com.a11yland.hissi.widget.HissiWidget
 import com.a11yland.hissi.widget.NearbyWidget
@@ -28,6 +29,14 @@ class AppContainer(private val context: Context) {
     // Builds and refreshes must survive a cancelled caller (search keystrokes,
     // closed screens), so they run on this app-lifetime scope.
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // The status source of every refresh: the catalog's targeted fetch. Its
+    // records come with the bundled seed overlaid, so their source and
+    // operator names replace what a favorite carries.
+    suspend fun statusSources(): StatusSources {
+        val catalog = catalog()
+        return StatusSources(equipment = { catalog.equipment(it) }, metadataIsComplete = true)
+    }
 
     val api: TransitApi by lazy {
         TransitApi(

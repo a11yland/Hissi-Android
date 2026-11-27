@@ -1,10 +1,6 @@
 package com.a11yland.hissi.core
 
 import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
-import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -68,15 +64,30 @@ class RelativeTimeTest {
         assertEquals("vor 3 Tagen", MonitoredElevator.relativeTime(ago(minutes = 3 * 24 * 60)))
     }
 
-    // The date follows the user's locale; the German "am" prefix mirrors the
-    // source-language key, as in the Swift package without a string catalog.
+    // Times are always relative, never a date: after two weeks of days come
+    // weeks, months and years.
     @Test
-    fun beyondAWeekIsAbsoluteLocalizedDate() {
-        val date = Instant.now().minusSeconds(400L * 24 * 60 * 60)
-        val formatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT)
-            .withLocale(Locale.getDefault())
-            .withZone(ZoneId.systemDefault())
-        assertEquals("am ${formatter.format(date)}", MonitoredElevator.relativeTime(date))
+    fun daysRunForTwoWeeks() {
+        assertEquals("vor 13 Tagen", MonitoredElevator.relativeTime(ago(minutes = 13 * 1440)))
+        assertEquals("vor 2 Wochen", MonitoredElevator.relativeTime(ago(minutes = 14 * 1440)))
+    }
+
+    @Test
+    fun weeksMonthsAndYears() {
+        assertEquals("vor 8 Wochen", MonitoredElevator.relativeTime(ago(minutes = 59 * 1440)))
+        assertEquals("vor 2 Monaten", MonitoredElevator.relativeTime(ago(minutes = 60 * 1440)))
+        assertEquals("vor 13 Monaten", MonitoredElevator.relativeTime(ago(minutes = 400 * 1440)))
+        assertEquals("vor 2 Jahren", MonitoredElevator.relativeTime(ago(minutes = 730 * 1440)))
+    }
+
+    // TalkBack gets the short units written out.
+    @Test
+    fun spokenFormWritesTheUnitsOut() {
+        assertEquals("vor 1 Minute", MonitoredElevator.relativeTime(ago(minutes = 1), spoken = true))
+        assertEquals("vor 5 Minuten", MonitoredElevator.relativeTime(ago(minutes = 5), spoken = true))
+        assertEquals("vor 1 Stunde", MonitoredElevator.relativeTime(ago(minutes = 60), spoken = true))
+        assertEquals("vor 8 Stunden", MonitoredElevator.relativeTime(ago(minutes = 8 * 60), spoken = true))
+        assertEquals("vor 3 Tagen", MonitoredElevator.relativeTime(ago(minutes = 3 * 1440), spoken = true))
     }
 }
 

@@ -73,8 +73,38 @@ class FavoritesOrderingTest {
     }
 
     @Test
-    fun defaultOrderIsRecentlyAdded() {
-        assertEquals(FavoritesOrder.RECENTLY_ADDED, FavoritesOrder.DEFAULT)
+    fun defaultOrderIsBrokenFirst() {
+        assertEquals(FavoritesOrder.BROKEN_FIRST, FavoritesOrder.DEFAULT)
+        // The former default stays selectable, next to the manual order.
+        assertContentEquals(
+            listOf(FavoritesOrder.BROKEN_FIRST, FavoritesOrder.RECENTLY_ADDED, FavoritesOrder.MANUAL),
+            FavoritesOrder.entries,
+        )
+    }
+
+    // Out of service on top, then unknown, then working — and within each
+    // group the newest favorite first.
+    @Test
+    fun brokenFirstGroupsByStatusThenNewestFirst() {
+        fun status(id: String, isWorking: Boolean?, minutes: Long) =
+            favorite(id, addedAtEpochMillis = reference + minutes * 60_000).copy(isWorking = isWorking)
+        val list = listOf(
+            status("working-new", true, 50),
+            status("broken-old", false, 10),
+            status("unknown", null, 40),
+            status("working-old", true, 20),
+            status("broken-new", false, 30),
+        )
+        assertContentEquals(
+            listOf("broken-new", "broken-old", "unknown", "working-new", "working-old"),
+            FavoritesOrdering.apply(FavoritesOrder.BROKEN_FIRST, list).map { it.id },
+        )
+        // With every lift working it is simply newest first.
+        val allWorking = list.map { it.copy(isWorking = true) }
+        assertContentEquals(
+            FavoritesOrdering.byRecentlyAdded(allWorking).map { it.id },
+            FavoritesOrdering.byBrokenFirst(allWorking).map { it.id },
+        )
     }
 
     // MARK: Adding

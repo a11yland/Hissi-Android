@@ -6,6 +6,7 @@ import android.net.Uri
 import android.content.res.Configuration
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -40,6 +41,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
@@ -86,10 +89,26 @@ fun ElevatorDetailScreen(
         modifier = Modifier.semantics { paneTitle = elevator.stationName },
         topBar = {
             CenterAlignedTopAppBar(
-                // Empty on purpose: the station name is the headline below the
-                // bar (DetailFields), where it can wrap at any font size — a
-                // one-line bar title cut long names off.
-                title = {},
+                // Nothing to see here on purpose: the station name is the
+                // headline below the bar (DetailFields), where it can wrap at
+                // any font size — a one-line bar title cut long names off.
+                // For TalkBack the name is announced from this slot, though:
+                // a bar reads navigation icon, title, actions, which gives
+                // the iOS order — back, station (heading), favorite star,
+                // then the status. The visible headline carries no semantics
+                // of its own, so the name is not read twice.
+                title = {
+                    val stationName = elevator.stationName
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .semantics {
+                                heading()
+                                contentDescription = stationName
+                            },
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -191,24 +210,41 @@ private fun DetailFields(elevator: MonitoredElevator) {
     val color = statusColor(status)
 
     // The screen's heading, like the favorites headline below the app bar.
+    // TalkBack hears it from the bar's title slot instead (see there), so
+    // that it comes before the favorite star, as on iOS.
     Text(
         elevator.stationName,
         style = MaterialTheme.typography.headlineSmall,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.semantics { heading() },
+        modifier = Modifier.clearAndSetSemantics {},
     )
 
+    // Status and duration are one statement: the duration stands right
+    // under the status, in the list row's words, and TalkBack hears one
+    // sentence with the units written out ("Außer Betrieb seit 9 Stunden").
+    val statusText = statusLabel(status)
+    val since = elevator.shownStatusSince
+    val spokenStatus = statusSentence(LocalContext.current, statusText, since)
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.semantics(mergeDescendants = true) {},
+        modifier = Modifier.clearAndSetSemantics { contentDescription = spokenStatus },
     ) {
         Icon(status.icon.vector(), contentDescription = null, tint = statusSymbolColor(status))
-        Text(
-            statusLabel(status),
-            style = MaterialTheme.typography.titleMedium,
-            color = color,
-        )
+        Column {
+            Text(
+                statusText,
+                style = MaterialTheme.typography.titleMedium,
+                color = color,
+            )
+            if (since != null) {
+                Text(
+                    sinceText(since),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 
     if (elevator.isDataStale) {
@@ -234,6 +270,8 @@ private fun DetailFields(elevator: MonitoredElevator) {
         stringResource(R.string.field_data_age),
         elevator.lastUpdated?.let { relativeTimeText(it) }
             ?: stringResource(R.string.value_unknown),
+        // Spoken with the units written out ("vor 8 Stunden").
+        spokenValue = elevator.lastUpdated?.let { relativeTimeText(it, spoken = true) },
     )
     elevator.stateExplanation?.takeIf { it.isNotEmpty() }?.let {
         LabeledField(stringResource(R.string.field_reason), it)
@@ -256,11 +294,17 @@ private fun openInMaps(context: Context, elevator: MonitoredElevator) {
 }
 
 @Composable
-private fun LabeledField(label: String, value: String) {
+private fun LabeledField(label: String, value: String, spokenValue: String? = null) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .semantics(mergeDescendants = true) {},
+            .then(
+                if (spokenValue == null) {
+                    Modifier.semantics(mergeDescendants = true) {}
+                } else {
+                    Modifier.clearAndSetSemantics { contentDescription = "$label, $spokenValue" }
+                },
+            ),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(

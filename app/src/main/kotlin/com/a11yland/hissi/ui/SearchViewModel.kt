@@ -91,7 +91,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     suspend fun refreshed(elevator: MonitoredElevator): MonitoredElevator? {
         val record = runCatching { container.catalog().equipment(setOf(elevator.id)) }
             .getOrNull()?.get(elevator.id) ?: return null
-        val merged = StatusMerge.apply(record, elevator)
+        val merged = StatusMerge.apply(record, elevator, replacingMetadata = true)
         _regions.value = SearchGrouping.replacing(_regions.value, id = elevator.id, elevator = merged)
         return merged
     }

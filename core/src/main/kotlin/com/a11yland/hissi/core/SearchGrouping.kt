@@ -109,6 +109,7 @@ object SearchGrouping {
             isWorking = equipment.isWorking,
             lastCheckedEpochMillis = Instant.now().toEpochMilli(),
             lastUpdatedEpochMillis = equipment.lastUpdateEpochMillis,
+            statusSinceEpochMillis = equipment.statusSinceEpochMillis,
             sourceName = equipment.sourceName,
             organizationName = equipment.organizationName,
             stateExplanation = equipment.stateExplanation,
