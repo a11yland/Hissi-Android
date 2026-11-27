@@ -36,7 +36,12 @@ What the code already does:
   browser. Label/value pairs on the detail screen and notice cards are merged
   into one element.
 - **Screen structure.** The detail screen announces itself through a pane
-  title and carries the station name as a heading; the nearby block's title
+  title and carries the station name as a heading. The heading is spoken
+  from the app bar's title slot (invisible there; the visible headline
+  below the bar carries no semantics), so TalkBack reads back, station,
+  favorite star, status — the same order as VoiceOver on iOS. The TalkBack
+  focus frame for the heading therefore sits in the bar, above the visible
+  name; the nearby block's title
   is a heading (`ui/ElevatorDetailScreen.kt`, `ui/NearbySection.kt`).
 - **No drag-only interaction for assistive technology.** Favorites can be
   reordered by long-press drag, and the rows also offer "Nach oben

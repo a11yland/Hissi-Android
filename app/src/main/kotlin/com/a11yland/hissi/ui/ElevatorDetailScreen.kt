@@ -6,6 +6,7 @@ import android.net.Uri
 import android.content.res.Configuration
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -88,10 +89,26 @@ fun ElevatorDetailScreen(
         modifier = Modifier.semantics { paneTitle = elevator.stationName },
         topBar = {
             CenterAlignedTopAppBar(
-                // Empty on purpose: the station name is the headline below the
-                // bar (DetailFields), where it can wrap at any font size — a
-                // one-line bar title cut long names off.
-                title = {},
+                // Nothing to see here on purpose: the station name is the
+                // headline below the bar (DetailFields), where it can wrap at
+                // any font size — a one-line bar title cut long names off.
+                // For TalkBack the name is announced from this slot, though:
+                // a bar reads navigation icon, title, actions, which gives
+                // the iOS order — back, station (heading), favorite star,
+                // then the status. The visible headline carries no semantics
+                // of its own, so the name is not read twice.
+                title = {
+                    val stationName = elevator.stationName
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .semantics {
+                                heading()
+                                contentDescription = stationName
+                            },
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -193,11 +210,13 @@ private fun DetailFields(elevator: MonitoredElevator) {
     val color = statusColor(status)
 
     // The screen's heading, like the favorites headline below the app bar.
+    // TalkBack hears it from the bar's title slot instead (see there), so
+    // that it comes before the favorite star, as on iOS.
     Text(
         elevator.stationName,
         style = MaterialTheme.typography.headlineSmall,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.semantics { heading() },
+        modifier = Modifier.clearAndSetSemantics {},
     )
 
     // Status and duration are one statement: the duration stands right
