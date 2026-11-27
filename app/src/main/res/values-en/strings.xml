@@ -183,4 +183,8 @@
     <string name="whats_new_1_5_since_detail">Elevators that are out of service show for how long – in the widget too.</string>
     <string name="whats_new_1_5_order_title">Disruptions first</string>
     <string name="whats_new_1_5_order_detail">Elevators that are out of service now come first in your favorites. You can find the previous order in the sort menu.</string>
+    <string name="whats_new_1_5_reason_title">Reason for the disruption</string>
+    <string name="whats_new_1_5_reason_detail">Your favorites now reliably say why an elevator is out of service.</string>
+    <string name="whats_new_1_5_data_title">Updated elevator data</string>
+    <string name="whats_new_1_5_data_detail">Some elevators have more precise descriptions, for example with the street name and the direction of travel.</string>
 </resources>

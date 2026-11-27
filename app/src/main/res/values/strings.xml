@@ -186,4 +186,8 @@
     <string name="whats_new_1_5_since_detail">Gestörte Aufzüge zeigen, seit wann sie außer Betrieb sind – auch im Widget.</string>
     <string name="whats_new_1_5_order_title">Störungen zuerst</string>
     <string name="whats_new_1_5_order_detail">Aufzüge außer Betrieb stehen in deinen Favoriten jetzt oben. Die bisherige Reihenfolge findest du im Sortieren-Menü.</string>
+    <string name="whats_new_1_5_reason_title">Grund der Störung</string>
+    <string name="whats_new_1_5_reason_detail">Bei deinen Favoriten steht jetzt zuverlässig dabei, warum ein Aufzug außer Betrieb ist.</string>
+    <string name="whats_new_1_5_data_title">Aktualisierte Aufzugsdaten</string>
+    <string name="whats_new_1_5_data_detail">Einige Aufzüge haben genauere Beschreibungen, zum Beispiel mit Straßenname und Fahrtrichtung.</string>
 </resources>
