@@ -65,13 +65,16 @@ the catalog before bumping anything.
   joins), catalog handling (`CatalogCache`, `EquipmentCatalog`, `SeedCatalog`,
   `StatusMerge`), the status duration (`statusSince` on `Equipment` and
   `MonitoredElevator` — a real transition or null, never `updatedAt`; shown
-  for disruptions only, `shownStatusSince`: the current span's start when
-  it agrees with the status, else, via `StatusHistory`, the start of the
-  span running now — upstream serves `current_status_span` empty and gives
-  a running span a planned end a month ahead; read from one extra
-  `TransitApi.fetchLatestSpans` request that `ElevatorRefresher.withHistory`
-  makes only for favorites that are not working and still undated,
-  `StatusMerge` keeps a known date while the status holds; times are always
+  for disruptions only, `shownStatusSince`: the start of the span running
+  now when it agrees with the status. Upstream serves `current_status_span`
+  empty and gives a running span a planned end a month ahead, so the
+  targeted request selects the join `operational_status.status_spans` —
+  the newest spans inline, `Elevator.inlineSpans` — and `joinTargeted`
+  feeds them to the same `join` as the list fetch: one request carries a
+  disruption's text and start, there is no second one. `StatusMerge` takes
+  the record's date as it is, and with `replacingMetadata` (the app's
+  records are seed-backed) also its source and operator names, so a stale
+  name from an older seed goes; times are always
   relative, never a date — `MonitoredElevator.Age`: minutes, hours, days
   for two weeks, then weeks, months, years — for "seit …" in rows, detail
   and widget and for "Datenstand"/"Geprüft" alike), search (`SearchGrouping`, `SearchHighlight`,

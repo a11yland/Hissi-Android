@@ -10,6 +10,12 @@ object StatusMerge {
         equipment: AccessibilityCloudClient.Equipment,
         elevator: MonitoredElevator,
         now: Instant = Instant.now(),
+        // The record comes with the bundled seed overlaid, so its source and
+        // operator names are complete — an empty one means "none", and
+        // replaces a name the favorite still carries from an older seed.
+        // Without the seed an empty name says nothing and the favorite keeps
+        // what it knows.
+        replacingMetadata: Boolean = false,
     ): MonitoredElevator {
         // A seed-id favorite resolved through the inventory-number bridge
         // (EquipmentCatalog.bridgedLiveIds) comes back as its live record —
@@ -29,13 +35,10 @@ object StatusMerge {
             stationName = equipment.stationName.ifEmpty { updated.stationName },
             elevatorDescription = equipment.description.ifEmpty { updated.elevatorDescription },
             isWorking = equipment.isWorking,
-            // "Seit": a record that names the transition wins. One that
-            // doesn't (the catalog cache carries no span history) says
-            // nothing about it — while the status is unchanged the favorite
-            // keeps what it knows, a changed status drops it rather than
-            // dating the new status with the old one's start.
-            statusSinceEpochMillis = equipment.statusSinceEpochMillis
-                ?: elevator.statusSinceEpochMillis.takeIf { equipment.isWorking == elevator.isWorking },
+            // "Seit" is status like the rest: every path dates a disruption
+            // from the span running now, so a record without a date means
+            // there is none — it must not keep an old one alive.
+            statusSinceEpochMillis = equipment.statusSinceEpochMillis,
             lastCheckedEpochMillis = now.toEpochMilli(),
             lastUpdatedEpochMillis = equipment.lastUpdateEpochMillis,
             stateExplanation = equipment.stateExplanation,
@@ -46,8 +49,12 @@ object StatusMerge {
             // favorite already knows; the status fields above are the
             // opposite case (a cleared disruption has to clear its reason).
             // Coordinates move as a pair.
-            sourceName = equipment.sourceName.ifEmpty { updated.sourceName },
-            organizationName = equipment.organizationName.ifEmpty { updated.organizationName },
+            sourceName = if (replacingMetadata) equipment.sourceName else equipment.sourceName.ifEmpty { updated.sourceName },
+            organizationName = if (replacingMetadata) {
+                equipment.organizationName
+            } else {
+                equipment.organizationName.ifEmpty { updated.organizationName }
+            },
             latitude = if (hasCoordinate) equipment.latitude else updated.latitude,
             longitude = if (hasCoordinate) equipment.longitude else updated.longitude,
             // Keeps the seed bridge fresh; absent on gap-station records,

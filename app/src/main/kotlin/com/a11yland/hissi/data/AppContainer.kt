@@ -30,15 +30,12 @@ class AppContainer(private val context: Context) {
     // closed screens), so they run on this app-lifetime scope.
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    // The status source of every refresh: the catalog's targeted fetch plus
-    // the span history for the "seit" of elevators no current span dates.
-    // Demo mode never touches the network — its catalog is dated already.
+    // The status source of every refresh: the catalog's targeted fetch. Its
+    // records come with the bundled seed overlaid, so their source and
+    // operator names replace what a favorite carries.
     suspend fun statusSources(): StatusSources {
         val catalog = catalog()
-        return StatusSources(
-            equipment = { catalog.equipment(it) },
-            latestSpans = if (DemoMode.isActive) null else { ids -> api.fetchLatestSpans(ids) },
-        )
+        return StatusSources(equipment = { catalog.equipment(it) }, metadataIsComplete = true)
     }
 
     val api: TransitApi by lazy {

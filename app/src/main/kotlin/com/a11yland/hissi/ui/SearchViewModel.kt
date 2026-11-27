@@ -7,7 +7,6 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import com.a11yland.hissi.HissiApplication
 import com.a11yland.hissi.R
 import com.a11yland.hissi.core.AccessibilityCloudClient
-import com.a11yland.hissi.core.ElevatorRefresher
 import com.a11yland.hissi.core.EquipmentCatalog
 import com.a11yland.hissi.core.MonitoredElevator
 import com.a11yland.hissi.core.NearbyStations
@@ -92,11 +91,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     suspend fun refreshed(elevator: MonitoredElevator): MonitoredElevator? {
         val record = runCatching { container.catalog().equipment(setOf(elevator.id)) }
             .getOrNull()?.get(elevator.id) ?: return null
-        // Plus the span history for the "seit" the record doesn't carry (a
-        // working elevator has no current span).
-        val merged = runCatching {
-            ElevatorRefresher.withHistory(listOf(StatusMerge.apply(record, elevator)), container.statusSources())
-        }.getOrNull()?.firstOrNull() ?: StatusMerge.apply(record, elevator)
+        val merged = StatusMerge.apply(record, elevator, replacingMetadata = true)
         _regions.value = SearchGrouping.replacing(_regions.value, id = elevator.id, elevator = merged)
         return merged
     }

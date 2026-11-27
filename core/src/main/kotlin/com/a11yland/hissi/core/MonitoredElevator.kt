@@ -24,7 +24,7 @@ data class MonitoredElevator(
     // lastChecked: a fresh poll can still return stale source data.
     val lastUpdatedEpochMillis: Long? = null,
     // When the current status began ("seit …") — a real transition time or
-    // null, never a guess (AccessibilityCloudClient.statusSince, StatusHistory).
+    // null, never a guess (AccessibilityCloudClient.statusSince, in `join`).
     val statusSinceEpochMillis: Long? = null,
     // accessibility.cloud source/organization for this record, e.g.
     // "BVG Elevators (2025)" / "BVG Berliner Verkehrsbetriebe AöR".

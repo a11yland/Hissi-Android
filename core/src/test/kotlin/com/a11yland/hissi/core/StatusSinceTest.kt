@@ -2,9 +2,7 @@ package com.a11yland.hissi.core
 
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
-import io.ktor.client.engine.mock.respondError
 import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import java.time.Instant
 import kotlin.test.Test
@@ -101,90 +99,66 @@ class StatusSinceJoinTest {
     }
 }
 
-// "Außer Betrieb seit": the start of the span running now. The status
-// request itself carries no current span, so the spans are asked for.
-class StatusHistoryTest {
-    private val spans = AccessibilityCloudClient.parseStatusSpans(fixtureData("status_history")).items
+// The targeted favorites request as upstream really answers it: no
+// `current_status_span`, but the elevator's newest spans inline. The span
+// running now gives a disruption its text and its start — in the one
+// request, on every refresh.
+class TargetedSpansTest {
+    private val elevators = AccessibilityCloudClient.parseElevators(fixtureData("elevators_targeted_spans")).items
+    private val joined = AccessibilityCloudClient.joinTargeted(elevators, now = fixtureNow)
 
-    private fun spansOf(id: String) = spans.filter { id in it.elevatorIds }
+    private fun equipment(id: String) = joined.first { it.id == id }
 
-    // 7400: an out_of_service span without an end, after a closed one.
+    // Upstream gives a running span a planned end a month ahead; it runs now.
     @Test
-    fun runningSpanDatesTheDisruption() {
-        assertEquals(
-            instant("2026-06-20T07:00:00.000Z"),
-            StatusHistory.since(isWorking = false, spans = spansOf("7400"), now = fixtureNow),
-        )
-    }
-
-    // Upstream gives a running span a planned end a month ahead — it still
-    // runs now.
-    @Test
-    fun plannedEndInTheFutureStillCounts() {
-        val start = instant("2026-06-26T06:52:35Z")
-        val running = AccessibilityCloudClient.StatusSpan(
-            elevatorIds = listOf("1"), isWorking = false, start = start, end = instant("2026-07-26T06:52:35Z"),
-        )
-        assertEquals(start, StatusHistory.since(isWorking = false, spans = listOf(running), now = fixtureNow))
-    }
-
-    // An unknown status is dated the same way, from an "unknown" span.
-    @Test
-    fun unknownStatusIsDatedFromItsRunningSpan() {
-        val start = instant("2026-06-27T02:19:09Z")
-        val running = AccessibilityCloudClient.StatusSpan(elevatorIds = listOf("1"), isWorking = null, start = start)
-        assertEquals(start, StatusHistory.since(isWorking = null, spans = listOf(running), now = fixtureNow))
-    }
-
-    // How long a lift has been working is not shown — and not derived.
-    @Test
-    fun workingElevatorsAreNeverDated() {
-        assertNull(StatusHistory.since(isWorking = true, spans = spansOf("7349"), now = fixtureNow))
-        assertNull(StatusHistory.since(isWorking = true, spans = spansOf("7401"), now = fixtureNow))
-    }
-
-    // The last span has ended (7349) or is of another status: the elevator
-    // moved on and upstream hasn't caught up — no date, never a guess.
-    @Test
-    fun endedOrDisagreeingSpanDatesNothing() {
-        assertNull(StatusHistory.since(isWorking = false, spans = spansOf("7349"), now = fixtureNow))
-        assertNull(StatusHistory.since(isWorking = null, spans = spansOf("7400"), now = fixtureNow))
+    fun brokenElevatorGetsReasonAndStartFromItsRunningSpan() {
+        val broken = equipment("5564")
+        assertEquals(false, broken.isWorking)
+        assertEquals(instant("2026-06-27T12:00:00.000Z"), broken.statusSince)
+        assertEquals("Aufzug außer Betrieb – Technik ist informiert.", broken.stateExplanation)
+        assertEquals("Oranienburger Straße (Berlin)", broken.stationName)
     }
 
     @Test
-    fun spansThatHaveNotStartedAreIgnored() {
-        val running = AccessibilityCloudClient.StatusSpan(
-            elevatorIds = listOf("1"), isWorking = false, start = instant("2026-06-01T00:00:00Z"),
-        )
-        val planned = AccessibilityCloudClient.StatusSpan(
-            elevatorIds = listOf("1"), isWorking = false, start = fixtureNow.plusSeconds(86_400),
-        )
-        assertEquals(
-            running.start,
-            StatusHistory.since(isWorking = false, spans = listOf(planned, running), now = fixtureNow),
-        )
+    fun unknownStatusIsDatedFromAnUnknownSpan() {
+        val unknown = equipment("7377")
+        assertNull(unknown.isWorking)
+        assertEquals(instant("2026-06-27T02:19:09.401Z"), unknown.statusSince)
+        // A reason is a disruption's; "unknown" carries none.
+        assertNull(unknown.stateExplanation)
+    }
+
+    // Only ended spans: nothing runs now, so nothing is dated and no old
+    // outage text is shown.
+    @Test
+    fun workingElevatorTakesNothingFromEndedSpans() {
+        val working = equipment("7349")
+        assertEquals(true, working.isWorking)
+        assertNull(working.statusSince)
+        assertNull(working.stateExplanation)
     }
 
     @Test
-    fun noSpansGiveNothing() {
-        assertNull(StatusHistory.since(isWorking = false, spans = emptyList(), now = fixtureNow))
+    fun brokenElevatorWithoutSpansStaysUndated() {
+        val bare = equipment("6622")
+        assertEquals(false, bare.isWorking)
+        assertNull(bare.statusSince)
+        assertNull(bare.stateExplanation)
     }
 
+    // The running span disagrees with the elevator (out of service vs.
+    // unknown): its start says nothing about when the outage began.
     @Test
-    fun appliedFillsOnlyWhatIsUndated() {
-        fun favorite(id: String, isWorking: Boolean? = false, since: Instant? = null) = MonitoredElevator(
-            id = id, stationId = "1", elevatorId = id, stationName = "S", elevatorDescription = "",
-            isWorking = isWorking, statusSinceEpochMillis = since?.toEpochMilli(),
-        )
-        val known = instant("2026-01-01T00:00:00Z")
-        val result = StatusHistory.applied(
-            listOf(favorite("7400"), favorite("7400", since = known), favorite("7402"), favorite("7400", isWorking = true)),
-            spans = spans, now = fixtureNow,
-        )
-        assertEquals(
-            listOf(instant("2026-06-20T07:00:00.000Z"), known, null, null),
-            result.map { it.statusSince },
-        )
+    fun disagreeingRunningSpanDatesNothing() {
+        assertNull(equipment("7400").statusSince)
+    }
+
+    // Bare ids in the join (a depth=0 answer) are not spans.
+    @Test
+    fun bareSpanIdsAreIgnored() {
+        assertTrue(elevators.first { it.id == "7401" }.inlineSpans.isEmpty())
+        assertEquals(3, elevators.first { it.id == "5564" }.inlineSpans.size)
+        assertNull(equipment("7401").statusSince)
     }
 }
 
@@ -208,164 +182,62 @@ class StatusSinceMergeTest {
         assertEquals(newer, merged.statusSince)
     }
 
-    // The catalog cache carries no history — an undated record must not
-    // erase what a targeted refresh found out.
+    // Every path dates a disruption from the span running now, so a record
+    // without a date means there is none: an old date is not kept alive.
     @Test
-    fun undatedRecordKeepsTheDateWhileTheStatusHolds() {
-        assertEquals(since, StatusMerge.apply(equipment(true, null), favorite(true, since)).statusSince)
+    fun undatedRecordClearsTheDate() {
+        assertNull(StatusMerge.apply(equipment(false, null), favorite(false, since)).statusSince)
     }
 
     @Test
-    fun changedStatusDropsTheOldDate() {
-        assertNull(StatusMerge.apply(equipment(true, null), favorite(false, since)).statusSince)
-    }
-
-    @Test
-    fun dateSurvivesTheIdMigration() {
-        val merged = StatusMerge.apply(equipment(true, null), favorite(true, since, id = "fasta-1"))
+    fun dateComesWithTheRecordThroughTheIdMigration() {
+        val merged = StatusMerge.apply(equipment(false, since), favorite(false, null, id = "fasta-1"))
         assertEquals("101", merged.id)
         assertEquals(since, merged.statusSince)
     }
-}
 
-// Dating disruptions costs at most one extra request, and none in the
-// steady state — or for favorites that work.
-class StatusSinceRefreshTest {
-    private val requests = mutableListOf<Set<String>>()
-    private val brokeAt = instant("2026-06-20T07:00:00Z")
-    private val known = instant("2026-06-01T00:00:00Z")
-
-    private fun favorite(id: String, isWorking: Boolean? = false, since: Instant? = null) = MonitoredElevator(
-        id = id, stationId = "1", elevatorId = id, stationName = "S", elevatorDescription = "",
-        isWorking = isWorking, statusSinceEpochMillis = since?.toEpochMilli(),
-    )
-
-    private fun equipment(id: String, isWorking: Boolean? = false, since: Instant? = null) =
-        AccessibilityCloudClient.Equipment(
-            id = id, stationId = "1", stationName = "S", description = "", isWorking = isWorking,
-            statusSinceEpochMillis = since?.toEpochMilli(),
-        )
-
-    private val running = listOf(
-        AccessibilityCloudClient.StatusSpan(elevatorIds = listOf("7400"), isWorking = false, start = brokeAt),
-    )
-
-    private fun sources(
-        equipment: List<AccessibilityCloudClient.Equipment>,
-        spans: List<AccessibilityCloudClient.StatusSpan>? = running,
-        asksHistory: Boolean = true,
-    ) = StatusSources(
-        equipment = { _ -> equipment.associateBy { it.id } },
-        latestSpans = if (asksHistory) {
-            { ids ->
-                requests.add(ids)
-                spans
-            }
-        } else {
-            null
-        },
-    )
-
+    // Source and operator: with the seed overlaid the record is complete,
+    // an empty name replaces one the favorite carries from an older seed.
     @Test
-    fun oneRequestForExactlyTheUndatedDisruptions() = runTest {
-        val (updated, _) = ElevatorRefresher.refreshAll(
-            listOf(
-                favorite("7400"), favorite("102", since = known), favorite("103"),
-                favorite("104", isWorking = true),
-            ),
-            sources(
-                listOf(equipment("7400"), equipment("102"), equipment("103"), equipment("104", isWorking = true)),
-            ),
-        )
-        // Not the dated one, not the working one.
-        assertEquals(listOf(setOf("7400", "103")), requests)
-        assertEquals(listOf(brokeAt, known, null, null), updated.map { it.statusSince })
-    }
-
-    @Test
-    fun noRequestWhenEveryDisruptionIsDated() = runTest {
-        ElevatorRefresher.refreshAll(
-            listOf(favorite("101", since = known), favorite("102")),
-            sources(listOf(equipment("101"), equipment("102", since = known))),
-        )
-        assertTrue(requests.isEmpty())
-    }
-
-    @Test
-    fun workingFavoritesCostNoRequest() = runTest {
-        ElevatorRefresher.refreshAll(
-            listOf(favorite("101", isWorking = true), favorite("102", isWorking = true)),
-            sources(listOf(equipment("101", isWorking = true), equipment("102", isWorking = true))),
-        )
-        assertTrue(requests.isEmpty())
-    }
-
-    @Test
-    fun failedSpanRequestChangesNothing() = runTest {
-        val (updated, failed) = ElevatorRefresher.refreshAll(
-            listOf(favorite("7400")), sources(listOf(equipment("7400")), spans = null),
-        )
-        assertNull(updated.first().statusSince)
-        assertNotNull(updated.first().lastChecked)
-        assertTrue(failed.isEmpty())
-    }
-
-    // A favorite the status request didn't answer for is not asked about.
-    @Test
-    fun unansweredFavoritesAreNotAskedAbout() = runTest {
-        ElevatorRefresher.refreshAll(
-            listOf(favorite("7400"), favorite("999")), sources(listOf(equipment("7400"))),
-        )
-        assertEquals(listOf(setOf("7400")), requests)
-    }
-
-    @Test
-    fun sourcesWithoutHistoryNeverAsk() = runTest {
-        val (updated, _) = ElevatorRefresher.refreshAll(
-            listOf(favorite("7400")), sources(listOf(equipment("7400")), asksHistory = false),
-        )
-        assertTrue(requests.isEmpty())
-        assertNull(updated.first().statusSince)
+    fun seedBackedRecordReplacesAStaleSourceName() {
+        val stale = favorite(false, null).copy(sourceName = "VBB Anlagen (S-Bahn)", organizationName = "Alter Betreiber")
+        val record = equipment(false, null).copy(sourceName = "", organizationName = "DB InfraGO")
+        val replaced = StatusMerge.apply(record, stale, replacingMetadata = true)
+        assertEquals("", replaced.sourceName)
+        assertEquals("DB InfraGO", replaced.organizationName)
+        val kept = StatusMerge.apply(record, stale)
+        assertEquals("VBB Anlagen (S-Bahn)", kept.sourceName)
+        assertEquals("DB InfraGO", kept.organizationName)
     }
 }
 
-// No Swift counterpart (URLSession is untestable there): the request itself.
-class LatestSpansRequestTest {
-    private val jsonHeaders = headersOf(HttpHeaders.ContentType, "application/json")
-
-    private fun api(engine: MockEngine) =
-        TransitApi(engine = engine, token = "trtok_test", pageCounts = InMemoryPageCountStore())
-
+// No Swift counterpart (URLSession is untestable there): the one targeted
+// request asks for the spans inline and its answer is joined.
+class TargetedSpansRequestTest {
     @Test
-    fun asksOnceForTheNumericIdsNewestFirst() = runTest {
-        val seen = mutableListOf<Map<String, String?>>()
+    fun oneRequestCarriesTheSpansInline() = runTest {
+        val requests = mutableListOf<Map<String, String?>>()
         val engine = MockEngine { request ->
-            seen.add(
-                listOf("where[elevator][in]", "sort", "where[start_date][less_than_equal]", "depth")
+            requests.add(
+                listOf("select[operational_status][status_spans]", "where[id][in]", "depth")
                     .associateWith { request.url.parameters[it] } + ("path" to request.url.encodedPath),
             )
-            respond(fixtureData("status_history"), headers = jsonHeaders)
+            respond(
+                fixtureData("elevators_targeted_spans"),
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
         }
-        val spans = api(engine).fetchLatestSpans(setOf("7400", "7349", "fasta-1"), now = fixtureNow)
-        assertEquals(6, spans?.size)
-        assertEquals(1, seen.size)
-        assertEquals("/api/status-spans", seen.first()["path"])
-        assertEquals("7349,7400", seen.first()["where[elevator][in]"])
-        assertEquals("-start_date", seen.first()["sort"])
-        assertEquals("2026-07-01T12:00:00Z", seen.first()["where[start_date][less_than_equal]"])
-        assertEquals("0", seen.first()["depth"])
-    }
-
-    @Test
-    fun failureIsNullAndNoIdsNeedNoRequest() = runTest {
-        var calls = 0
-        val engine = MockEngine {
-            calls += 1
-            respondError(HttpStatusCode.InternalServerError)
-        }
-        assertNull(api(engine).fetchLatestSpans(setOf("7349")))
-        assertEquals(emptyList(), api(engine).fetchLatestSpans(setOf("fasta-1")))
-        assertEquals(1, calls)
+        val api = TransitApi(engine = engine, token = "trtok_test", pageCounts = InMemoryPageCountStore())
+        val equipment = api.fetchEquipment(listOf("5564", "7349"))
+        assertEquals(1, requests.size)
+        assertEquals("/api/elevators", requests.first()["path"])
+        assertEquals("true", requests.first()["select[operational_status][status_spans]"])
+        assertEquals("5564,7349", requests.first()["where[id][in]"])
+        assertEquals("1", requests.first()["depth"])
+        // The join itself is covered with a fixed clock (TargetedSpansTest);
+        // here only that the answer is parsed and joined at all.
+        assertEquals(false, equipment?.first { it.id == "5564" }?.isWorking)
+        assertEquals(6, equipment?.size)
     }
 }
 

@@ -1,6 +1,5 @@
 package com.a11yland.hissi.core
 
-import java.time.Instant
 
 // Driven port for the refresh orchestration: the status source as an
 // injectable function. The app wires up the real catalog
@@ -12,10 +11,11 @@ data class StatusSources(
     // never one request per favorite, never a full catalog build. Keys of the
     // result = the requested ids.
     val equipment: suspend (Set<String>) -> Map<String, AccessibilityCloudClient.Equipment>,
-    // The latest status spans of the given elevators (closed ones included),
-    // for the "seit" of elevators no current span dates. A null result is a
-    // failure; a null function means this caller doesn't ask (demo mode).
-    val latestSpans: (suspend (Set<String>) -> List<AccessibilityCloudClient.StatusSpan>?)? = null,
+    // Whether the records come with the bundled seed overlaid — then their
+    // source and operator names are the whole truth and replace what a
+    // favorite carries, an empty name included (StatusMerge). The app always
+    // has the seed; the default is for callers without one.
+    val metadataIsComplete: Boolean = false,
 )
 
 // Refreshes all favorites in one catalog batch. transit.accessibility.cloud
@@ -40,30 +40,9 @@ object ElevatorRefresher {
                 failed.add(elevator.id)
                 elevator
             } else {
-                StatusMerge.apply(equipment, elevator)
+                StatusMerge.apply(equipment, elevator, replacingMetadata = sources.metadataIsComplete)
             }
         }
-        return Result(withHistory(updated, sources, skipping = failed), failed)
-    }
-
-    // Dates the disruptions that are still undated ("seit") from the spans:
-    // at most one extra request, and only when a favorite that is not
-    // working lacks the date — one whose status didn't change keeps the one
-    // it has (StatusMerge), and working favorites are never dated, so the
-    // steady state asks nothing. A failed request changes nothing.
-    suspend fun withHistory(
-        elevators: List<MonitoredElevator>,
-        sources: StatusSources,
-        skipping: Set<String> = emptySet(),
-        now: Instant = Instant.now(),
-    ): List<MonitoredElevator> {
-        val latestSpans = sources.latestSpans ?: return elevators
-        val undated = elevators
-            .filter { it.isWorking != true && it.statusSinceEpochMillis == null && it.id !in skipping }
-            .map { it.id }
-            .toSet()
-        if (undated.isEmpty()) return elevators
-        val spans = latestSpans(undated) ?: return elevators
-        return StatusHistory.applied(elevators, spans, now)
+        return Result(updated, failed)
     }
 }
