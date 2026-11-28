@@ -53,10 +53,12 @@ requests fail at runtime and the map snippet stays blank.
 ## Architecture
 
 Two Gradle modules (`settings.gradle.kts`), versions in
-`gradle/libs.versions.toml`. AGP 9 with built-in Kotlin for `:app`; Kotlin is
-pinned to the version AGP bundles (2.2.10), and Ktor, serialization, coroutines
-and maps-compose are pinned to releases readable by it. Check the comments in
-the catalog before bumping anything.
+`gradle/libs.versions.toml`. AGP 9 with built-in Kotlin for `:app`: the Kotlin
+version in the catalog (2.4.21) is the one that compiles — the one AGP bundles
+(2.2.10 in 9.5.x) is only the minimum. The compiler reads library metadata up
+to one minor version ahead, which bounds Ktor, serialization, coroutines and
+maps-compose. The Compose BOM is held back by `compileSdk` (37.0). Check the
+comments in the catalog before bumping anything.
 
 - **`:core`** (`com.a11yland.hissi.core`): pure JVM, no Android dependencies.
   Hand-ported from the iOS `Shared/` folder. Models (`MonitoredElevator`,

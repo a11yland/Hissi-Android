@@ -41,7 +41,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.StreetViewSource
 import com.google.maps.android.compose.streetview.StreetView
 import com.google.maps.android.compose.streetview.rememberStreetViewCameraPositionState
-import com.google.maps.android.ktx.MapsExperimentalFeature
+import com.google.maps.android.MapsExperimentalFeature
 
 // The street-level counterpart of the iOS Look Around preview: Street View
 // ships in the same play-services-maps artifact as the map snippet, and all
