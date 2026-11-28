@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.glance.appwidget.updateAll
 import com.a11yland.hissi.BuildConfig
 import com.a11yland.hissi.core.AccessibilityCloudClient
+import com.a11yland.hissi.core.AppUserAgent
 import com.a11yland.hissi.core.CatalogCache
 import com.a11yland.hissi.core.DemoFixtures
 import com.a11yland.hissi.core.PageCountStore
@@ -46,6 +47,7 @@ class AppContainer(private val context: Context) {
             // Mirrors the iOS behavior: requests carry the app's resolved
             // language (per-app locale included — it changes the default).
             appLocalization = { Locale.getDefault().toLanguageTag() },
+            userAgent = AppUserAgent.make(BuildConfig.VERSION_NAME),
             logger = { android.util.Log.w("HissiApi", it) },
         )
     }

@@ -4,6 +4,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
@@ -51,6 +52,8 @@ class TransitApi(
     private val appLocalization: () -> String? = { Locale.getDefault().toLanguageTag() },
     targetedTimeoutMillis: Long = 20_000,
     private val catalogTimeoutMillis: Long = 45_000,
+    // Sent with every request; the app passes its version (AppUserAgent).
+    private val userAgent: String = AppUserAgent.make(version = null),
     // Failed requests degrade silently by design (seed fallback) — without
     // this hook they would also be undiagnosable.
     private val logger: (String) -> Unit = {},
@@ -71,6 +74,7 @@ class TransitApi(
             // Without this, OkHttp's 10 s default kills every page.
             socketTimeoutMillis = targetedTimeoutMillis
         }
+        install(UserAgent) { agent = userAgent }
         expectSuccess = false
     }
 

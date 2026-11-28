@@ -63,7 +63,8 @@ comments in the catalog before bumping anything.
 - **`:core`** (`com.a11yland.hissi.core`): pure JVM, no Android dependencies.
   Hand-ported from the iOS `Shared/` folder. Models (`MonitoredElevator`,
   `ElevatorStatus`, `ElevatorSummary`), the API client (`TransitApi` for
-  network and pagination, `AccessibilityCloudClient` for pure parsing and
+  network and pagination — every request carries the User-Agent
+  `Hissi/<version> (Android)`, `AppUserAgent`, instead of Ktor's default —, `AccessibilityCloudClient` for pure parsing and
   joins), catalog handling (`CatalogCache`, `EquipmentCatalog`, `SeedCatalog`,
   `StatusMerge`), the status duration (`statusSince` on `Equipment` and
   `MonitoredElevator` — a real transition or null, never `updatedAt`; shown
